@@ -130,12 +130,16 @@ begin
   if length(v_log)<1 then raise exception 'EMPTY_MESSAGE'; end if;
  elsif p_action='roll' then
   if not (v_state->>'started')::boolean then raise exception 'NOT_STARTED'; end if;
-  v_bonus:=greatest(-5,least(10,coalesce((p_payload->>'bonus')::int,0)));
+  -- The browser chooses a skill and DC; the modifier comes from the authenticated character.
+  if p_payload->>'skill' not in ('调查','洞悉','说服','潜行','运动','奥秘','求生') then raise exception 'INVALID_SKILL'; end if;
+  select floor(((stats->>case p_payload->>'skill' when '运动' then 0 when '潜行' then 1 when '调查' then 3 when '奥秘' then 3 when '洞悉' then 4 when '求生' then 4 else 5 end)::int-10)/2.0)::int
+    + case when (class_name='战士' and p_payload->>'skill'='运动') or (class_name='游荡者' and p_payload->>'skill' in ('调查','潜行')) or (class_name='法师' and p_payload->>'skill'='奥秘') or (class_name='牧师' and p_payload->>'skill'='洞悉') or (class_name='游侠' and p_payload->>'skill'='求生') or (class_name='吟游诗人' and p_payload->>'skill'='说服') then 2 else 0 end into v_bonus from public.players where id=v_id;
   v_dc:=greatest(5,least(30,coalesce((p_payload->>'dc')::int,15)));
   v_roll:=floor(random()*20)::int+1;
   v_log:=left(coalesce(p_payload->>'skill','技能'),30)||'检定 D20='||v_roll||'，加值 '||v_bonus||'，DC '||v_dc||'：'||case when v_roll=20 then '大成功' when v_roll=1 then '大失败' when v_roll+v_bonus>=v_dc then '成功' else '失败' end;
  elsif p_action='choice' then
   if not (v_state->>'started')::boolean then raise exception 'NOT_STARTED'; end if;
+  if coalesce((v_state->>'chosen_chapter')::int,-1)=(v_state->>'chapter')::int then raise exception 'CHOICE_ALREADY_MADE'; end if;
   v_idx:=coalesce((p_payload->>'index')::int,-1);
   if v_idx<0 or v_idx>1 then raise exception 'INVALID_CHOICE'; end if;
   select choices->v_idx into p_payload from public.campaign_chapters where id=(v_state->>'chapter')::int;
@@ -144,10 +148,12 @@ begin
   if length(coalesce(p_payload->>'flag',''))>0 and not v_flags ? (p_payload->>'flag') then v_flags:=v_flags||to_jsonb(left(p_payload->>'flag',40)); end if;
   if length(coalesce(p_payload->>'clue',''))>0 and not v_clues ? (p_payload->>'clue') then v_clues:=v_clues||to_jsonb(left(p_payload->>'clue',60)); end if;
   v_state:=jsonb_set(jsonb_set(v_state,'{flags}',v_flags),'{clues}',v_clues);
+  v_state:=jsonb_set(v_state,'{chosen_chapter}',to_jsonb((v_state->>'chapter')::int));
   v_log:='选择：'||left(coalesce(p_payload->>'label',''),80);
  elsif p_action='advance' then
   if not v_host then raise exception 'HOST_ONLY'; end if;
   if not (v_state->>'started')::boolean then raise exception 'NOT_STARTED'; end if;
+  if coalesce((v_state->>'chosen_chapter')::int,-1)<>coalesce((v_state->>'chapter')::int,0) then raise exception 'CHOOSE_BEFORE_ADVANCE'; end if;
   if v_state->'combat' is not null and v_state->'combat'<>'null'::jsonb and coalesce((v_state#>>'{combat,hp}')::int,0)>0 then raise exception 'COMBAT_ACTIVE'; end if;
   v_idx:=least(29,coalesce((v_state->>'chapter')::int,0)+1);
   v_state:=jsonb_set(jsonb_set(v_state,'{chapter}',to_jsonb(v_idx)),'{completed_quests}',coalesce(v_state->'completed_quests','[]'::jsonb)||to_jsonb(v_idx-1));
