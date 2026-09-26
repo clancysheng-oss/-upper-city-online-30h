@@ -75,7 +75,7 @@ begin
   v_name:=left(trim(coalesce(p_payload->>'name','')),32); v_class:=p_payload->>'class';
   if length(v_name)<2 or v_class not in ('战士','游荡者','法师','牧师','游侠','吟游诗人') then raise exception 'INVALID_CHARACTER'; end if;
   for v_try in 1..10 loop
-   v_rand:=gen_random_bytes(5); v_newcode:='';
+   v_rand:=decode(replace(gen_random_uuid()::text,'-',''),'hex'); v_newcode:='';
    for v_idx in 0..4 loop v_newcode:=v_newcode||substr(v_chars,1+get_byte(v_rand,v_idx)%length(v_chars),1); end loop;
    insert into public.rooms(code) values(v_newcode) on conflict do nothing;
    exit when found;
