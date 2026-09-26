@@ -54,6 +54,7 @@ function loadConfig(){url.value=localStorage.uc_url||"";key.value=localStorage.u
 function saveConfig(){localStorage.uc_url=url.value.trim();localStorage.uc_key=key.value.trim();alert("已保存在本机浏览器。");}
 function clearConfig(){localStorage.removeItem("uc_url");localStorage.removeItem("uc_key");url.value=key.value=""}
 async function join(){
+    alert("按钮已触发");
  const u=localStorage.uc_url||url.value.trim(),k=localStorage.uc_key||key.value.trim();
  if(!u||!k||!name.value.trim()||!room.value.trim())return alert("请填写连接信息、角色名和房间码");
  sb=supabase.createClient(u,k); roomId=room.value.trim().toUpperCase(); me=name.value.trim();
