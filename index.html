@@ -59,6 +59,7 @@ async function join(){
  if(!u||!k||!name.value.trim()||!room.value.trim())return alert("请填写连接信息、角色名和房间码");
  sb=supabase.createClient(u,k); roomId=room.value.trim().toUpperCase(); me=name.value.trim();
  await sb.from("rooms").upsert({code:roomId,title:"Upper City 30H"},{onConflict:"code"});
+ alert((await sb.from("rooms").select()).error?.message||"rooms OK");
  await sb.from("players").upsert({room_code:roomId,name:me,class_name:klass.value,last_seen:new Date().toISOString()},{onConflict:"room_code,name"});
  setup.classList.add("hidden");lobby.classList.add("hidden");game.classList.remove("hidden");roomLabel.textContent=roomId;
  renderScene(); await refresh(); subscribe(); await system(me+" 进入了上城区。");
