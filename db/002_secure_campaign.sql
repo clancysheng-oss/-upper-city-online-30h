@@ -27,7 +27,8 @@ drop policy if exists "game_states public demo" on public.game_states;
 drop policy if exists "messages public demo" on public.messages;
 -- Access reads through one security-definer snapshot RPC. No direct table operations are granted.
 revoke all on public.rooms,public.players,public.game_states,public.messages from anon,authenticated;
-create table if not exists public.campaign_chapters (id integer primary key, choices jsonb not null);
+create table if not exists public.campaign_chapters (id integer primary key, choices jsonb not null, scenes jsonb not null default '[]'::jsonb);
+alter table public.campaign_chapters add column if not exists scenes jsonb not null default '[]'::jsonb;
 revoke all on public.campaign_chapters from anon,authenticated;
 insert into public.campaign_chapters(id,choices) values (0,'[{"label":"调查灰烬","clue":"询问守门人","flag":"ash"},{"label":"混入马车队","flag":"gate"}]'::jsonb) on conflict(id) do update set choices=excluded.choices;
 insert into public.campaign_chapters(id,choices) values (1,'[{"label":"打开铜匣","clue":"铜匣密码","flag":"cipher"},{"label":"保护掌柜","flag":"keeper"}]'::jsonb) on conflict(id) do update set choices=excluded.choices;
@@ -68,7 +69,7 @@ begin
  return result;
 end $$;
 create or replace function public.party_command(p_code text, p_action text, p_payload jsonb default '{}'::jsonb) returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
-declare v_code text:=upper(trim(coalesce(p_code,''))); v_uid uuid:=auth.uid(); v_name text; v_class text; v_id bigint; v_host boolean; v_state jsonb; v_players int; v_unready int; v_target bigint; v_roll int; v_bonus int; v_dc int; v_dmg int; v_hp int; v_ac int; v_idx int; v_flags jsonb; v_clues jsonb; v_combat jsonb; v_turn bigint; v_next bigint; v_enemy_hp int; v_log text; v_chars text:='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; v_rand bytea; v_try int; v_newcode text; v_stats jsonb; v_max int; v_init jsonb; v_ord bigint;
+declare v_code text:=upper(trim(coalesce(p_code,''))); v_uid uuid:=auth.uid(); v_name text; v_class text; v_id bigint; v_host boolean; v_state jsonb; v_players int; v_unready int; v_target bigint; v_roll int; v_bonus int; v_dc int; v_dmg int; v_hp int; v_ac int; v_idx int; v_flags jsonb; v_clues jsonb; v_combat jsonb; v_turn bigint; v_next bigint; v_enemy_hp int; v_log text; v_chars text:='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; v_rand bytea; v_try int; v_newcode text; v_stats jsonb; v_max int; v_init jsonb; v_ord bigint; v_scene jsonb; v_key text; v_skill text;
 begin
  if v_uid is null then raise exception 'AUTH_REQUIRED'; end if;
  if p_action='create' then
@@ -137,9 +138,31 @@ begin
   v_dc:=greatest(5,least(30,coalesce((p_payload->>'dc')::int,15)));
   v_roll:=floor(random()*20)::int+1;
   v_log:=left(coalesce(p_payload->>'skill','技能'),30)||'检定 D20='||v_roll||'，加值 '||v_bonus||'，DC '||v_dc||'：'||case when v_roll=20 then '大成功' when v_roll=1 then '大失败' when v_roll+v_bonus>=v_dc then '成功' else '失败' end;
+ elsif p_action='explore' then
+  if not (v_state->>'started')::boolean then raise exception 'NOT_STARTED'; end if;
+  v_idx:=coalesce((p_payload->>'index')::int,-1);
+  if v_idx<0 or v_idx>1 then raise exception 'INVALID_ENCOUNTER'; end if;
+  v_key:=(v_state->>'chapter')||':'||v_idx;
+  if coalesce(v_state->'explored','[]'::jsonb) ? v_key then raise exception 'ALREADY_EXPLORED'; end if;
+  select scenes->v_idx into v_scene from public.campaign_chapters where id=(v_state->>'chapter')::int;
+  if v_scene is null then raise exception 'ENCOUNTER_UNAVAILABLE'; end if;
+  v_skill:=v_scene->>'skill'; v_dc:=(v_scene->>'dc')::int;
+  select floor(((stats->>case v_skill when '运动' then 0 when '潜行' then 1 when '调查' then 3 when '奥秘' then 3 when '洞悉' then 4 when '求生' then 4 else 5 end)::int-10)/2.0)::int
+   + case when (class_name='战士' and v_skill='运动') or (class_name='游荡者' and v_skill in ('调查','潜行')) or (class_name='法师' and v_skill='奥秘') or (class_name='牧师' and v_skill='洞悉') or (class_name='游侠' and v_skill='求生') or (class_name='吟游诗人' and v_skill='说服') then 2 else 0 end into v_bonus from public.players where id=v_id;
+  v_roll:=floor(random()*20)::int+1;
+  v_state:=jsonb_set(v_state,'{explored}',coalesce(v_state->'explored','[]'::jsonb)||to_jsonb(v_key));
+  if v_roll=20 or (v_roll<>1 and v_roll+v_bonus>=v_dc) then
+   v_clues:=coalesce(v_state->'clues','[]'::jsonb); v_flags:=coalesce(v_state->'flags','[]'::jsonb);
+   if not v_clues ? (v_scene->>'clue') then v_clues:=v_clues||to_jsonb(v_scene->>'clue'); end if;
+   if not v_flags ? (v_scene->>'flag') then v_flags:=v_flags||to_jsonb(v_scene->>'flag'); end if;
+   v_state:=jsonb_set(jsonb_set(v_state,'{clues}',v_clues),'{flags}',v_flags);
+   v_log:=v_scene->>'success';
+  else v_log:=v_scene->>'failure'; end if;
+  v_log:=(v_scene->>'label')||' · '||v_skill||' D20='||v_roll||'+'||v_bonus||' / DC '||v_dc||case when v_roll=20 then ' 大成功' when v_roll=1 then ' 大失败' else '' end||'：'||v_log;
  elsif p_action='choice' then
   if not (v_state->>'started')::boolean then raise exception 'NOT_STARTED'; end if;
   if coalesce((v_state->>'chosen_chapter')::int,-1)=(v_state->>'chapter')::int then raise exception 'CHOICE_ALREADY_MADE'; end if;
+  if not (coalesce(v_state->'explored','[]'::jsonb) ? ((v_state->>'chapter')||':0')) or not (coalesce(v_state->'explored','[]'::jsonb) ? ((v_state->>'chapter')||':1')) then raise exception 'EXPLORE_BEFORE_CHOICE'; end if;
   v_idx:=coalesce((p_payload->>'index')::int,-1);
   if v_idx<0 or v_idx>1 then raise exception 'INVALID_CHOICE'; end if;
   select choices->v_idx into p_payload from public.campaign_chapters where id=(v_state->>'chapter')::int;
@@ -153,14 +176,15 @@ begin
  elsif p_action='advance' then
   if not v_host then raise exception 'HOST_ONLY'; end if;
   if not (v_state->>'started')::boolean then raise exception 'NOT_STARTED'; end if;
+  if (v_state->>'chapter')::int>=29 then raise exception 'CAMPAIGN_COMPLETE'; end if;
   if coalesce((v_state->>'chosen_chapter')::int,-1)<>coalesce((v_state->>'chapter')::int,0) then raise exception 'CHOOSE_BEFORE_ADVANCE'; end if;
   if v_state->'combat' is not null and v_state->'combat'<>'null'::jsonb and coalesce((v_state#>>'{combat,hp}')::int,0)>0 then raise exception 'COMBAT_ACTIVE'; end if;
   v_idx:=least(29,coalesce((v_state->>'chapter')::int,0)+1);
   v_state:=jsonb_set(jsonb_set(v_state,'{chapter}',to_jsonb(v_idx)),'{completed_quests}',coalesce(v_state->'completed_quests','[]'::jsonb)||to_jsonb(v_idx-1));
   if v_idx in (17,28) then
-   v_enemy_hp:=case when v_idx=17 then 35 else 55 end;
+   v_enemy_hp:=case when v_idx=17 then 35 when (v_state->'flags') ? 'defector' then 40 else 55 end;
    select jsonb_agg(jsonb_build_object('id',id,'roll',roll) order by roll desc,id),(array_agg(id order by roll desc,id))[1] into v_init,v_turn from (select id,floor(random()*20)::int+1 as roll from public.players where room_code=v_code and user_id is not null and hp>0) i;
-   v_state:=jsonb_set(v_state,'{combat}',jsonb_build_object('name',case when v_idx=17 then '盐井甲壳兽' else '议会雇佣兵首领' end,'hp',v_enemy_hp,'max_hp',v_enemy_hp,'ac',13,'turn',v_turn,'initiative',v_init,'round',1));
+   v_state:=jsonb_set(v_state,'{combat}',jsonb_build_object('name',case when v_idx=17 then '盐井甲壳兽' else '议会雇佣兵首领' end,'hp',v_enemy_hp,'max_hp',v_enemy_hp,'ac',case when v_idx=17 and (v_state->'flags') ? 'weak_spot' then 11 else 13 end,'turn',v_turn,'initiative',v_init,'round',1));
   else v_state:=jsonb_set(v_state,'{combat}','null'::jsonb); end if;
   if v_idx=29 then v_state:=jsonb_set(v_state,'{ending}',to_jsonb(case when (v_state->'flags') ? 'council' then '公民议会重建' when (v_state->'flags') ? 'autonomy' then '地下自治联盟' when jsonb_array_length(v_state->'flags')>=18 then '城市共同体' else '艰难的黎明' end)); end if;
   if v_idx%5=0 then update public.players set gold=gold+10 where room_code=v_code and user_id is not null; end if;
