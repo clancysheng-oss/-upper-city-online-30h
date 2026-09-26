@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "test": "node tests/db-flow.mjs"
+    "test": "node tests/db-flow.mjs",
+    "campaign:sql": "node scripts/build-encounters-sql.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0"
