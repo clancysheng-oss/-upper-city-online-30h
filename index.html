@@ -54,15 +54,54 @@ function loadConfig(){url.value=localStorage.uc_url||"";key.value=localStorage.u
 function saveConfig(){localStorage.uc_url=url.value.trim();localStorage.uc_key=key.value.trim();alert("已保存在本机浏览器。");}
 function clearConfig(){localStorage.removeItem("uc_url");localStorage.removeItem("uc_key");url.value=key.value=""}
 async function join(){
-    alert("按钮已触发");
- const u=localStorage.uc_url||url.value.trim(),k=localStorage.uc_key||key.value.trim();
- if(!u||!k||!name.value.trim()||!room.value.trim())return alert("请填写连接信息、角色名和房间码");
- sb=supabase.createClient(u,k); roomId=room.value.trim().toUpperCase(); me=name.value.trim();
- await sb.from("rooms").upsert({code:roomId,title:"Upper City 30H"},{onConflict:"code"});
- alert((await sb.from("rooms").select()).error?.message||"rooms OK");
- await sb.from("players").upsert({room_code:roomId,name:me,class_name:klass.value,last_seen:new Date().toISOString()},{onConflict:"room_code,name"});
- setup.classList.add("hidden");lobby.classList.add("hidden");game.classList.remove("hidden");roomLabel.textContent=roomId;
- renderScene(); await refresh(); subscribe(); await system(me+" 进入了上城区。");
+  try{
+    const u=localStorage.uc_url||document.getElementById("url").value.trim();
+    const k=localStorage.uc_key||document.getElementById("key").value.trim();
+    const playerName=document.getElementById("name").value.trim();
+    const roomCode=document.getElementById("room").value.trim().toUpperCase();
+    const className=document.getElementById("klass").value;
+
+    if(!u||!k||!playerName||!roomCode){
+      alert("请填写连接信息、角色名和房间码");
+      return;
+    }
+
+    sb=supabase.createClient(u,k);
+    roomId=roomCode;
+    me=playerName;
+
+    const {error:roomError}=await sb.from("rooms").upsert(
+      {code:roomId,title:"Upper City 30H"},
+      {onConflict:"code"}
+    );
+    if(roomError) throw roomError;
+
+    const {error:playerError}=await sb.from("players").upsert(
+      {
+        room_code:roomId,
+        name:me,
+        class_name:className,
+        last_seen:new Date().toISOString()
+      },
+      {onConflict:"room_code,name"}
+    );
+    if(playerError) throw playerError;
+
+    document.getElementById("setup").classList.add("hidden");
+    document.getElementById("lobby").classList.add("hidden");
+    document.getElementById("game").classList.remove("hidden");
+    document.getElementById("roomLabel").textContent=roomId;
+
+    renderScene();
+    await refresh();
+    subscribe();
+    await system(me+" 进入了上城区。");
+
+  }catch(e){
+    alert("连接失败："+(e?.message||String(e)));
+    console.error(e);
+  }
+}
 }
 function renderScene(){let s=campaign[Math.min(sceneIndex,campaign.length-1)];chapterLabel.textContent=s[0];scene.innerHTML="<h3 class='chapter'>"+s[0]+"</h3><p>"+s[1]+"</p>";}
 async function nextScene(){sceneIndex=Math.min(sceneIndex+1,campaign.length-1);renderScene();await system("DM 推进至："+campaign[sceneIndex][0]);}
