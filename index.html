@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Upper City — 30H Online D&D</title>
+<style>
+:root{--bg:#0d0c0b;--card:#171411;--gold:#c9a66b;--ink:#eee4d2;--muted:#9d9488;--red:#74352e}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#282018,#0d0c0b 48%);color:var(--ink);font-family:Georgia,serif}
+main{max-width:980px;margin:auto;padding:20px}.hero{text-align:center;padding:35px 10px}.hero h1{font-size:42px;margin:0;color:var(--gold)}
+.card{background:#171411e8;border:1px solid #3c3126;border-radius:14px;padding:18px;margin:12px 0;box-shadow:0 12px 30px #0007}
+input,button,select,textarea{font:inherit;border-radius:9px;border:1px solid #4b3d30;padding:12px;background:#100e0c;color:var(--ink)}
+button{background:#5d4227;border-color:#8b6942;cursor:pointer}button:hover{filter:brightness(1.2)}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}
+.hidden{display:none}.muted{color:var(--muted);font-size:14px}.log{height:330px;overflow:auto;background:#0b0a09;padding:12px;border-radius:10px}
+.msg{border-bottom:1px solid #29231d;padding:8px 2px}.dm{color:#e0bd7c}.danger{color:#e88f7d}.chapter{color:#c9a66b}
+#players{display:flex;gap:8px;flex-wrap:wrap}.pill{padding:7px 10px;border:1px solid #51402f;border-radius:20px}
+textarea{width:100%;min-height:70px}@media(max-width:600px){.hero h1{font-size:30px}.row{display:block}.row>*{width:100%;margin:4px 0}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body><main>
+<section class="hero"><div class="muted">BALDUR'S GATE • FAN-MADE TABLETOP CAMPAIGN</div><h1>THE UPPER CITY</h1><p>约 30 小时多人 D&D 战役 · AI/人工 DM 辅助框架</p></section>
+<section id="setup" class="card">
+<h2>连接 Supabase</h2><p class="muted">只填 Project URL 与 anon/public key。不要填写 service_role/secret。</p>
+<div class="row"><input id="url" placeholder="https://xxxxx.supabase.co"><input id="key" placeholder="anon / public key"></div>
+<div class="row"><button onclick="saveConfig()">保存连接</button><button onclick="clearConfig()">清除</button></div>
+</section>
+<section id="lobby" class="card">
+<h2>进入战役</h2>
+<div class="row"><input id="name" placeholder="角色名"><select id="klass"><option>战士</option><option>游荡者</option><option>法师</option><option>牧师</option><option>圣武士</option><option>吟游诗人</option><option>术士</option><option>游侠</option></select></div>
+<div class="row"><input id="room" placeholder="房间码（例如 GATE7）"><button onclick="join()">加入 / 创建房间</button></div>
+</section>
+<section id="game" class="hidden">
+<div class="card"><div class="row"><div><b>房间：</b><span id="roomLabel"></span></div><div><b>章节：</b><span id="chapterLabel">序章：金门之后</span></div></div><div id="players"></div></div>
+<div class="card"><h2>DM 场景</h2><div id="scene"></div><div class="row"><button onclick="nextScene()">推进场景</button><button onclick="roll(20)">D20</button><button onclick="roll(100)">D100</button></div></div>
+<div class="card"><h2>队伍频道</h2><div id="log" class="log"></div><textarea id="message" placeholder="描述你的行动、对白或计划……"></textarea><div class="row"><button onclick="sendMsg()">发送行动</button><button onclick="dmPrompt()">DM 提示</button></div></div>
+</section>
+<script>
+let sb,roomId,me,sceneIndex=0;
+const campaign=[
+["序章：金门之后","你们穿过通往上城区的巨大拱门。雨水沿着白石雕像流下，守卫正在逐一核验通行证。一辆没有家徽的黑色马车从贵族车道疾驰而过，车底滴落着暗红色液体。"],
+["第一章：失踪的纹章","一名年轻贵族在宴会前夜失踪。他的房间没有搏斗痕迹，唯独家族纹章被人从墙上完整切走。调查将牵出三户彼此敌视的家族。"],
+["第二章：午夜拍卖会","线索指向只在午夜开放的地下拍卖场。拍品中出现了一把属于失踪者的匕首，以及一份记录上城区秘密通道的残图。"],
+["第三章：无声钟楼","城中的旧钟楼已经二十年没有敲响，但每到凌晨三点，附近居民都声称听见第十三声钟响。进入钟楼需要选择潜入、贿赂守卫或取得议会许可。"],
+["第四章：三家的晚宴","三大贵族家族同时邀请队伍赴宴。你们无法同时出席全部宴会，而缺席本身也会成为一种政治表态。"],
+["第五章：白鸦档案","一座私人档案馆保存着几十年前被抹去的审判记录。记录显示，如今上城区的部分财富建立在一次被刻意掩盖的清洗之上。"],
+["第六章：下水道王庭","地面上的阴谋延伸至城市地下。走私者、鼠人、逃亡者和一群自称“无冠者”的居民形成了自己的秩序。"],
+["第七章：镜厅之夜","年度化装舞会开始。每名玩家都会收到一张只写给自己的纸条，其中至少一张是伪造的。刺客就在宾客之间。"],
+["第八章：破碎议会","证据公开后，议会分裂。队伍可以支持公开审判、秘密交易、彻底揭露档案，或拒绝所有阵营并建立自己的联盟。"],
+["第九章：围城之前","城市大门突然封闭。有人利用队伍之前的行动制造恐慌。旧盟友是否出现，将由此前完成的支线和关系决定。"],
+["第十章：上城区之心","所有线索最终汇聚到城市最古老建筑的地下。真正的目标并非王位，而是一份足以重新分配整座城市权力的契约。"],
+["终章：黎明判决","没有唯一正确结局。上城区可以继续由旧贵族掌控、被改革派接管、陷入权力真空，或形成由玩家促成的新秩序。幸存 NPC 会根据你们的选择给出不同尾声。"]
+];
+function loadConfig(){url.value=localStorage.uc_url||"";key.value=localStorage.uc_key||""}
+function saveConfig(){localStorage.uc_url=url.value.trim();localStorage.uc_key=key.value.trim();alert("已保存在本机浏览器。");}
+function clearConfig(){localStorage.removeItem("uc_url");localStorage.removeItem("uc_key");url.value=key.value=""}
+async function join(){
+ const u=localStorage.uc_url||url.value.trim(),k=localStorage.uc_key||key.value.trim();
+ if(!u||!k||!name.value.trim()||!room.value.trim())return alert("请填写连接信息、角色名和房间码");
+ sb=supabase.createClient(u,k); roomId=room.value.trim().toUpperCase(); me=name.value.trim();
+ await sb.from("rooms").upsert({code:roomId,title:"Upper City 30H"},{onConflict:"code"});
+ await sb.from("players").upsert({room_code:roomId,name:me,class_name:klass.value,last_seen:new Date().toISOString()},{onConflict:"room_code,name"});
+ setup.classList.add("hidden");lobby.classList.add("hidden");game.classList.remove("hidden");roomLabel.textContent=roomId;
+ renderScene(); await refresh(); subscribe(); await system(me+" 进入了上城区。");
+}
+function renderScene(){let s=campaign[Math.min(sceneIndex,campaign.length-1)];chapterLabel.textContent=s[0];scene.innerHTML="<h3 class='chapter'>"+s[0]+"</h3><p>"+s[1]+"</p>";}
+async function nextScene(){sceneIndex=Math.min(sceneIndex+1,campaign.length-1);renderScene();await system("DM 推进至："+campaign[sceneIndex][0]);}
+async function system(t){await sb.from("messages").insert({room_code:roomId,sender:"DM",body:t,kind:"dm"});}
+async function sendMsg(){let t=message.value.trim();if(!t)return;message.value="";await sb.from("messages").insert({room_code:roomId,sender:me,body:t,kind:"action"});}
+async function roll(n){let r=Math.floor(Math.random()*n)+1;await sb.from("messages").insert({room_code:roomId,sender:me,body:"掷 D"+n+" → "+r,kind:"roll"});}
+async function dmPrompt(){await system("DM：根据玩家最近的行动进行一次检定或描述后果。成功也应产生代价或新的选择，避免直接替玩家决定行动。");}
+async function refresh(){
+ let {data:p}=await sb.from("players").select("*").eq("room_code",roomId).order("created_at");
+ players.innerHTML=(p||[]).map(x=>"<span class='pill'>"+esc(x.name)+" · "+esc(x.class_name||"冒险者")+"</span>").join("");
+ let {data:m}=await sb.from("messages").select("*").eq("room_code",roomId).order("created_at").limit(200);
+ log.innerHTML=(m||[]).map(x=>"<div class='msg "+(x.kind==="dm"?"dm":"")+"'><b>"+esc(x.sender)+":</b> "+esc(x.body)+"</div>").join("");log.scrollTop=log.scrollHeight;
+}
+function subscribe(){sb.channel("room-"+roomId).on("postgres_changes",{event:"*",schema:"public",table:"messages",filter:"room_code=eq."+roomId},refresh).on("postgres_changes",{event:"*",schema:"public",table:"players",filter:"room_code=eq."+roomId},refresh).subscribe();}
+function esc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+loadConfig();
+</script></main></body></html>
