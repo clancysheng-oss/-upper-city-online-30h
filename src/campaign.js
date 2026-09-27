@@ -1,4 +1,5 @@
 // Original Upper City campaign. Each chapter has several encounters; choice flags persist and shape later text/endings.
+import {battleByChapter} from './battles.js';
 export const acts = [
   {name:'序章 · 雨夜入城', lead:'一封没有署名的请柬把你们引到雨中的上城区。', chapters:[
     ['城门的第十三辆车','一辆封死车窗的马车从城门驶入，车辙留有发亮的灰。守门人却说今夜只放行十二辆。','调查灰烬','询问守门人','ash','混入马车队','gate'],
@@ -43,7 +44,7 @@ export const acts = [
     ['黎明之后','街道还在，城市却已经变了。盟友根据一路的承诺决定留下或离开。','记录后日谈','队伍编年史','epilogue','继续探索','legacy']
   ]}
 ];
-export const chapters=acts.flatMap((act, ai)=>act.chapters.map((c,ci)=>({id:ai*5+ci,act:act.name,lead:act.lead,title:c[0],text:c[1],choices:[{label:c[2],clue:c[3],flag:c[4]},{label:c[5],flag:c[6]}],combat:[17,28].includes(ai*5+ci)})));
+export const chapters=acts.flatMap((act, ai)=>act.chapters.map((c,ci)=>({id:ai*5+ci,act:act.name,lead:act.lead,title:c[0],text:c[1],choices:[{label:c[2],clue:c[3],flag:c[4]},{label:c[5],flag:c[6]}],combat:battleByChapter.has(ai*5+ci)})));
 export const classes={战士:{hp:14,ac:16,stats:[16,12,14,10,10,10],attack:5,damage:8,skill:'运动'},游荡者:{hp:10,ac:14,stats:[10,16,12,12,10,12],attack:5,damage:6,skill:'调查'},法师:{hp:8,ac:12,stats:[8,12,12,16,12,10],attack:5,damage:8,skill:'奥秘'},牧师:{hp:11,ac:15,stats:[12,10,14,10,16,12],attack:4,damage:6,skill:'洞悉'},游侠:{hp:11,ac:14,stats:[12,16,12,12,14,10],attack:5,damage:8,skill:'求生'},吟游诗人:{hp:10,ac:13,stats:[10,14,12,12,10,16],attack:4,damage:6,skill:'说服'}};
 
 export const npcs=[
