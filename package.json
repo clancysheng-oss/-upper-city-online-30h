@@ -1,6 +1,19 @@
 {
   "name": "upper-city-online-30h",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "scripts": {}
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "test": "node tests/db-flow.mjs",
+    "campaign:sql": "node scripts/build-encounters-sql.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.0"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0",
+    "@electric-sql/pglite": "^0.3.14"
+  }
 }
