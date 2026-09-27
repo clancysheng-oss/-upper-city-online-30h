@@ -5,7 +5,7 @@ await db.exec("create role anon;create role authenticated;create schema auth;cre
 const src=fs.readFileSync('db/002_secure_campaign.sql','utf8').replace('create extension if not exists pgcrypto;','');
 const old=fs.readFileSync('supabase.sql','utf8');
 const upgrade=fs.readFileSync('upgrade.sql','utf8');
-await db.exec(old);await db.exec(upgrade);await db.exec(src);await db.exec(fs.readFileSync('db/003_encounters.sql','utf8'));
+await db.exec(old);await db.exec(upgrade);await db.exec(src);await db.exec(fs.readFileSync('db/003_encounters.sql','utf8'));await db.exec(fs.readFileSync('db/004_campaign_battles.sql','utf8'));
 const ids=['00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000003'];
 async function act(i,code,action,payload={}){await db.query('select set_config($1,$2,false)',['app.uid',ids[i]]);const {rows}=await db.query('select public.party_command($1,$2,$3::jsonb) as result',[code,action,JSON.stringify(payload)]);return rows[0].result}
 function ok(cond,why){if(!cond)throw Error(why);console.log('OK',why)}
@@ -22,7 +22,22 @@ try{await act(1,code,'explore',{index:0});throw Error('REPEAT_EXPLORE')}catch(e)
 await act(0,code,'explore',{index:1});
 await act(0,code,'choice',{index:0,flag:'forged',clue:'fake'});const check=await act(1,code,'heartbeat');ok(check.state.flags.includes('ash')&&!check.state.flags.includes('forged'),'server rejects forged choice effects');
 try{await act(1,code,'advance');throw Error('NON_HOST_ADVANCED')}catch(e){ok(String(e.message).includes('HOST_ONLY'),'non-host advance rejected')}
-for(let i=0;i<17;i++){await act(0,code,'advance');await act(0,code,'explore',{index:0});await act(1,code,'explore',{index:1});await act(0,code,'choice',{index:0})}const combat=await act(1,code,'heartbeat');ok(combat.state.chapter===17&&combat.state.combat.hp===35&&combat.state.combat.initiative.length===2,'combat and initiative synchronize');
+const catalog=await db.query('select chapter_id,details from public.campaign_battles order by chapter_id');
+ok(catalog.rows.length===10&&catalog.rows.every(r=>r.details.hp>0&&r.details.die>0),'ten original server-owned battles');
+for(let i=0;i<17;i++){
+ if(i>0&&catalog.rows.some(r=>r.chapter_id===i)){
+  if(i===2){
+   const first=await act(1,code,'heartbeat');
+   ok(first.state.combat.name==='雨瓦追猎者'&&first.state.combat.max_hp===14,'earlier clue weakens first battle');
+   try{await act(0,code,'advance');throw Error('SKIPPED_FIGHT')}catch(e){ok(String(e.message).includes('COMBAT_ACTIVE'),'active battle blocks advancement')}
+   const who=first.state.combat.turn===first.me?1:0;
+   const fought=await act(who,code,'attack');ok(fought.state.combat.round>=1&&fought.messages.some(m=>m.body.includes('攻击 D20=')),'battle attack uses server dice');
+  }
+  // Set up the next chapter without depending on random combat outcomes in this progression test.
+  await db.query("update public.game_states set state=jsonb_set(state,'{combat,hp}','0'::jsonb) where room_code=$1",[code]);
+ }
+ await act(0,code,'advance');await act(0,code,'explore',{index:0});await act(1,code,'explore',{index:1});await act(0,code,'choice',{index:0});
+}const combat=await act(1,code,'heartbeat');ok(combat.state.chapter===17&&combat.state.combat.hp===35&&combat.state.combat.initiative.length===2,'combat and initiative synchronize');
 const actor=combat.state.combat.turn===combat.me?1:0;await act(actor,code,'attack');const fresh=await act(1,code,'heartbeat');ok(fresh.state.version>combat.state.version,'attack persists for refreshed player');
 await db.exec('set role authenticated');
 try{await db.query('update public.players set is_host=true where name=$1',['Bria']);throw Error('DIRECT_WRITE_ALLOWED')}catch(e){ok(String(e.message).includes('permission denied'),'direct table writes denied')}
