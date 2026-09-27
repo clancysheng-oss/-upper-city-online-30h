@@ -1,6 +1,6 @@
 // Original encounters keyed by zero-based chapter. The database owns all numbers and rewards.
 export const battles = [
-  {chapter:2,name:'雨瓦追猎者',intro:'灯语被截获后，披着油布的追猎者沿湿滑屋脊围住信使。',hp:19,ac:12,attack:2,min:1,die:4,aid:'ash',aidText:'灰烬路线让队伍先占高处。'},
+  {chapter:2,name:'雨瓦追猎者',intro:'灯语被截获后，披着油布的追猎者沿湿滑屋脊围住信使。',art:'/images/rooftop-chase.webp',hp:19,ac:12,attack:2,min:1,die:4,aid:'ash',aidText:'灰烬路线让队伍先占高处。'},
   {chapter:5,name:'灰市收账人',intro:'收账人带着没收工具闯进修表铺，要求交出所有账页。',hp:24,ac:13,attack:3,min:2,die:4,aid:'map',aidText:'地图标出的后门让工人及时撤离。'},
   {chapter:8,name:'冒名夜巡兵',intro:'假冒夜巡队的人试图逮捕证人，真正的队长被困在街口。',hp:26,ac:13,attack:3,min:2,die:5,aid:'workers',aidText:'受保护的工人指出了伪造的巡逻口令。'},
   {chapter:11,name:'失控的钟楼机械',intro:'守塔机械在齿轮间醒来，用铜臂封住藏有契约残页的暗格。',hp:29,ac:14,attack:3,min:2,die:5,aid:'auction',aidText:'拍卖名单标出了机械的制造商和停机记号。'},
