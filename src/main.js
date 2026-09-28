@@ -19,6 +19,12 @@ function render(){
   const edits=ids.map(id=>[id,root.querySelector(`#${id}`)?.value]).filter(([,value])=>value!==undefined);
   if(!data)home();else if(data.state.started)game();else lobby();
   for(const [id,value] of edits){const field=root.querySelector(`#${id}`);if(field&&(field.tagName!=='SELECT'||[...field.options].some(o=>o.value===value)))field.value=value;}
+  for(const id of ['attackTarget','enemyTarget']){
+    const field=root.querySelector(`#${id}`);
+    if(field?.selectedOptions[0]?.disabled){
+      field.value=[...field.options].find(option=>!option.disabled)?.value??'';
+    }
+  }
 }
 function setRoom(code){room=code;localStorage.setItem('uc_room',code);history.replaceState(null,'',`${location.pathname}?party=${code}`);unsub?.();unsub=subscribe(code,()=>refresh());clearInterval(heartbeat);heartbeat=setInterval(()=>command(room,'heartbeat').catch(()=>{}),45000);}
 async function refresh(){if(!room||loading)return;loading=true;try{const result=await snapshot(room);if(result){data=result;render();}}catch(e){if(e.message.includes('NOT_MEMBER')||e.message.includes('ROOM_NOT_FOUND')){localStorage.removeItem('uc_room');room='';data=null;unsub?.();clearInterval(heartbeat);render();}else{error=e.message;render();}}finally{loading=false;}}
