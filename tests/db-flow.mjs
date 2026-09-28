@@ -5,9 +5,10 @@ await db.exec("create role anon;create role authenticated;create schema auth;cre
 const src=fs.readFileSync('db/002_secure_campaign.sql','utf8').replace('create extension if not exists pgcrypto;','');
 const old=fs.readFileSync('supabase.sql','utf8');
 const upgrade=fs.readFileSync('upgrade.sql','utf8');
-await db.exec(old);await db.exec(upgrade);await db.exec(src);await db.exec(fs.readFileSync('db/003_encounters.sql','utf8'));await db.exec(fs.readFileSync('db/004_campaign_battles.sql','utf8'));
+await db.exec(old);await db.exec(upgrade);await db.exec(src);await db.exec(fs.readFileSync('db/003_encounters.sql','utf8'));await db.exec(fs.readFileSync('db/004_campaign_battles.sql','utf8'));await db.exec(fs.readFileSync('db/005_classes_spells.sql','utf8'));
 const ids=['00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000003'];
 async function act(i,code,action,payload={}){await db.query('select set_config($1,$2,false)',['app.uid',ids[i]]);const {rows}=await db.query('select public.party_command($1,$2,$3::jsonb) as result',[code,action,JSON.stringify(payload)]);return rows[0].result}
+async function power(i,code,id,target=null,slot=0){await db.query('select set_config($1,$2,false)',['app.uid',ids[i]]);const {rows}=await db.query('select public.party_power($1,$2,$3,$4) as result',[code,id,target,slot]);return rows[0].result}
 function ok(cond,why){if(!cond)throw Error(why);console.log('OK',why)}
 const a=await act(0,'','create',{name:'Aldren',class:'战士'}),code=a.room;
 ok(code.length===5&&a.players[0].is_host,'host creation and five-character code');
@@ -45,4 +46,26 @@ await db.exec('reset role');
 const beforeShop=await act(1,code,'heartbeat');const bought=await act(1,code,'buy',{item:'治疗药水'});ok(bought.players.find(p=>p.id===bought.me).gold===beforeShop.players.find(p=>p.id===beforeShop.me).gold-10,'shop deducts gold');
 try{await act(2,code,'heartbeat');throw Error('UNAUTHORIZED_JOIN')}catch(e){ok(String(e.message).includes('NOT_MEMBER'),'outsider cannot read room')}
 await act(0,code,'leave');const succession=await act(1,code,'heartbeat');ok(succession.players.find(p=>p.id===succession.me).is_host,'host departure transfers ownership');
+const pal=await act(0,'','create',{name:'Seren',class:'圣武士'}),palCode=pal.room;
+const wiz=await act(1,palCode,'join',{name:'Iriel',class:'法师'});
+ok(pal.players[0].ac===16&&pal.players[0].level===1&&wiz.players.length===2,'paladin creation, independent wizard and level 1 character cards');
+await act(0,palCode,'ready');await act(1,palCode,'ready');await act(0,palCode,'start');
+try{await power(1,palCode,'rest');throw Error('REST_NOT_HOST')}catch(e){ok(String(e.message).includes('HOST_ONLY'),'only host can long rest')}
+try{await power(0,palCode,'wizard_1',null,1);throw Error('FOREIGN_CLASS')}catch(e){ok(String(e.message).includes('POWER_NOT_KNOWN'),'cannot invoke another class spell')}
+try{await power(0,palCode,'paladin_6',null,6);throw Error('EARLY_SPELL')}catch(e){ok(String(e.message).includes('SPELL_CIRCLE_LOCKED'),'circle 6 is gated by level')}
+const helped=await power(0,palCode,'paladin_hands',wiz.me);
+ok(helped.players.find(p=>p.id===helped.me).ability_charges===1,'class skill consumes a server-owned charge');
+await power(0,palCode,'rest');
+try{await power(0,palCode,'rest');throw Error('DOUBLE_REST')}catch(e){ok(String(e.message).includes('ALREADY_RESTED'),'long rest cannot be repeated in a chapter')}
+for(let i=0;i<26;i++){
+ if(i>0&&catalog.rows.some(r=>r.chapter_id===i))await db.query("update public.game_states set state=jsonb_set(state,'{combat,hp}','0'::jsonb) where room_code=$1",[palCode]);
+ await act(0,palCode,'explore',{index:0});await act(1,palCode,'explore',{index:1});await act(0,palCode,'choice',{index:0});await act(0,palCode,'advance');
+}
+const high=await act(1,palCode,'heartbeat');ok(high.players.every(p=>p.level===11&&p.spell_slots[6]===1),'chapter milestones unlock circle 6 and refresh resources');
+const active=high.state.combat;ok(active.hp>0,'late battle active');
+const caster=active.turn===high.me?1:0,spell=caster===0?'paladin_6':'wizard_6';
+const cast=await power(caster,palCode,spell,null,6);
+ok(cast.players.find(p=>p.id===cast.me).spell_slots[6]===0&&cast.messages.some(m=>m.kind==='power'&&m.body.includes('D20=')),'circle 6 spell consumes one slot and rolls on server');
+try{await power(caster,palCode,spell,null,6);throw Error('DUPLICATE_CAST')}catch(e){ok(/NO_SPELL_SLOT|NOT_YOUR_TURN/.test(String(e.message)),'cannot reuse a spent circle 6 slot or steal a turn')}
+try{await power(2,palCode,'paladin_hands');throw Error('OUTSIDER_POWER')}catch(e){ok(String(e.message).includes('NOT_MEMBER'),'outsider cannot invoke party powers')}
 console.log('FLOW PASS',code);

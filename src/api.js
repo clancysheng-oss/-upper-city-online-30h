@@ -12,6 +12,10 @@ export async function command(code,action,payload={}){
  await ensureIdentity(); const {data,error}=await client.rpc('party_command',{p_code:code||'',p_action:action,p_payload:payload});
  if(error)throw error; return data;
 }
+export async function usePower(code,id,target,slot){
+ await ensureIdentity();const {data,error}=await client.rpc('party_power',{p_code:code,p_id:id,p_target:target,p_slot:slot});
+ if(error)throw error;return data;
+}
 export async function snapshot(code){
  await ensureIdentity();const {data,error}=await client.rpc('party_snapshot',{p_code:code});if(error)throw error;return data;
 }

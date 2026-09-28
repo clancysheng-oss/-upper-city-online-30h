@@ -8,7 +8,8 @@
     "build": "vite build",
     "test": "node tests/db-flow.mjs",
     "campaign:sql": "node scripts/build-encounters-sql.mjs",
-    "battles:sql": "node scripts/build-battles-sql.mjs"
+    "battles:sql": "node scripts/build-battles-sql.mjs",
+    "powers:sql": "node scripts/build-powers-sql.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0"
