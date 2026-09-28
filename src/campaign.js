@@ -64,6 +64,8 @@ export const sideQuests=[
 ];
 export function contextualText(chapter,flags=[]){
  const extra=[];
+ if(chapter.id>0&&flags.includes(`voice_${chapter.id-1}_trust`))extra.push('上一站赢得信任的证人已悄悄将你们的名字传给下一位联系人。');
+ if(chapter.id>0&&flags.includes(`support_${chapter.id-1}_protect`))extra.push('你们先前安排人手保护旁观者，这一带有人主动替队伍放哨。');
  if(chapter.id>=20&&flags.includes('workers'))extra.push('曾得到你们帮助的工人已经开始联络各街区。');
  if(chapter.id>=20&&flags.includes('archive'))extra.push('图书馆保存了你们带回的原始档案。');
  if(chapter.id>=20&&flags.includes('rescued'))extra.push('盐井的幸存者愿意以自己的姓名作证。');
