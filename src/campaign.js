@@ -45,7 +45,7 @@ export const acts = [
   ]}
 ];
 export const chapters=acts.flatMap((act, ai)=>act.chapters.map((c,ci)=>({id:ai*5+ci,act:act.name,lead:act.lead,title:c[0],text:c[1],choices:[{label:c[2],clue:c[3],flag:c[4]},{label:c[5],flag:c[6]}],combat:battleByChapter.has(ai*5+ci)})));
-export const classes={战士:{hp:14,ac:16,stats:[16,12,14,10,10,10],attack:5,damage:8,skill:'运动'},游荡者:{hp:10,ac:14,stats:[10,16,12,12,10,12],attack:5,damage:6,skill:'调查'},法师:{hp:8,ac:12,stats:[8,12,12,16,12,10],attack:5,damage:8,skill:'奥秘'},牧师:{hp:11,ac:15,stats:[12,10,14,10,16,12],attack:4,damage:6,skill:'洞悉'},游侠:{hp:11,ac:14,stats:[12,16,12,12,14,10],attack:5,damage:8,skill:'求生'},吟游诗人:{hp:10,ac:13,stats:[10,14,12,12,10,16],attack:4,damage:6,skill:'说服'}};
+export const classes={战士:{hp:14,ac:16,stats:[16,12,14,10,10,10],attack:5,damage:8,skill:'运动'},游荡者:{hp:10,ac:14,stats:[10,16,12,12,10,12],attack:5,damage:6,skill:'调查'},法师:{hp:8,ac:12,stats:[8,12,12,16,12,10],attack:5,damage:8,skill:'奥秘'},牧师:{hp:11,ac:15,stats:[12,10,14,10,16,12],attack:4,damage:6,skill:'洞悉'},游侠:{hp:11,ac:14,stats:[12,16,12,12,14,10],attack:5,damage:8,skill:'求生'},吟游诗人:{hp:10,ac:13,stats:[10,14,12,12,10,16],attack:4,damage:6,skill:'说服'},圣武士:{hp:13,ac:16,stats:[16,10,14,10,12,16],attack:5,damage:8,skill:'运动'}};
 
 export const npcs=[
  {name:'伊莱娅·维恩',role:'失踪议员的档案员',chapter:3,dialogue:'「名单上没有他的名字，可我亲手替他写过请柬。」'},
