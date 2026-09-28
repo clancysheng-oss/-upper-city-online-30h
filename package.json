@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "test": "node tests/db-flow.mjs",
+    "test": "node tests/db-flow.mjs && node tests/ui-flow.mjs",
     "campaign:sql": "node scripts/build-encounters-sql.mjs",
     "battles:sql": "node scripts/build-battles-sql.mjs",
-    "powers:sql": "node scripts/build-powers-sql.mjs"
+    "powers:sql": "node scripts/build-powers-sql.mjs",
+    "deeper:sql": "node scripts/build-deeper-sql.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0"
