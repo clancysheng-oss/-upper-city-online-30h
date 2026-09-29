@@ -53,7 +53,7 @@ function battleView(s, players, mine, messages) {
   const fighting = c.hp > 0;
   const defeated = fighting && c.turn == null && players.every(p=>p.hp<=0);
   const battleStart=messages.findLastIndex(m=>m.body?.includes(c.name)&&['advance','area_quest'].includes(m.kind));
-  const latest = messages.slice(battleStart<0?0:battleStart+1).findLast(m=>['attack','power','companion_attack','companion_skill','heal','death_save'].includes(m.kind));
+  const latest = messages.slice(battleStart<0?0:battleStart+1).findLast(m=>['attack','power','companion_attack','companion_skill','heal','death_save','retry'].includes(m.kind));
   const foes = c.enemies || [
     { name: c.name, hp: c.hp, max_hp: c.max_hp, ac: c.ac },
   ];
