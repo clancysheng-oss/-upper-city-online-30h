@@ -32,3 +32,8 @@ export function subscribe(code,onChange){
 }
 
 export async function areaCommand(code,action,payload={}){await ensureIdentity();const {data,error}=await client.rpc('party_area',{p_code:code,p_action:action,p_payload:payload});if(error)throw error;return data;}
+export async function saveSlot(action,slot=null,room=null,name=null,cls=null){
+ await ensureIdentity();const {data,error}=await client.rpc('party_save_slot',{p_action:action,p_slot:slot,p_room:room,p_name:name,p_class:cls});
+ if(error)throw error;return data;
+}
+export async function enterRegion(code,area){await ensureIdentity();const {data,error}=await client.rpc('party_region',{p_code:code,p_area:area});if(error)throw error;return data;}

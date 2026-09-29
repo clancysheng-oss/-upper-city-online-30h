@@ -103,7 +103,7 @@ function merchantView(mine, chapter, flags, fighting) {
       .join("") || '<p class="muted">暂时没有可装备物品。</p>'
   }</section>`;
 }
-export function renderGame(data, error, selectedArea=null) {
+export function renderGame(data, error, selectedArea=null, savedRoom=false) {
   const s = data.state,
     mine = data.players.find((p) => p.id === data.me),
     chapter = chapters[Math.min(s.chapter || 0, 29)],
@@ -118,7 +118,7 @@ export function renderGame(data, error, selectedArea=null) {
     .map((m) => `<p><strong>${esc(m.sender)}</strong>：${esc(m.body)}</p>`)
     .join(
       "",
-    )}</div></section></div><aside><section class="card"><h3>队伍角色</h3>${data.players.map((p) => `<div class="member">${p.is_host ? "👑 " : ""}${character(p)}</div>`).join("")}${data.players.some(p=>p.is_companion)?`<p class="muted">${esc(companionProfile.race)} · ${esc(companionProfile.background)}<br>${esc(companionProfile.active)}<br>${esc(companionProfile.passive)}</p>`:""}<div class="row">${button("离开", "leave")}${button("接任离线房主", "claim")}</div></section><section class="card"><h3>任务与线索</h3><p>主线：${esc(chapter.title)}</p><p>已完成章节 ${(s.completed_quests || []).length}/30</p>${sideQuests
+    )}</div></section></div><aside><section class="card"><h3>队伍角色</h3>${data.players.map((p) => `<div class="member">${p.is_host ? "👑 " : ""}${character(p)}</div>`).join("")}${data.players.some(p=>p.is_companion)?`<p class="muted">${esc(companionProfile.race)} · ${esc(companionProfile.background)}<br>${esc(companionProfile.active)}<br>${esc(companionProfile.passive)}</p>`:""}<div class="row">${savedRoom?"":button("离开", "leave")}${savedRoom?"":button("接任离线房主", "claim")}</div></section><section class="card"><h3>任务与线索</h3><p>主线：${esc(chapter.title)}</p><p>已完成章节 ${(s.completed_quests || []).length}/30</p>${sideQuests
     .filter((q) => chapter.id >= q.from && chapter.id <= q.to)
     .map(
       (q) =>
