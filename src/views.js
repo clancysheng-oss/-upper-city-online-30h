@@ -9,6 +9,7 @@ import { mapView, areaView, questJournal, sideBattleArt } from "./areas-view.js"
 import {experienceProgress} from './progression.js';
 import {deepChapters,classRoutes,companionInterjections} from './deep-story.js';
 import {battleAftermath} from './battle-aftermath.js';
+import {deepFollowups} from './deep-followups.js';
 export const esc = (s) =>
   String(s ?? "").replace(
     /[&<>"']/g,
@@ -55,9 +56,12 @@ function deepView(s,mine,players){
  <p class="muted">主动询问不同问题；全队共享调查与回答。</p>
  ${c.questions.map((label,i)=>button(label,'deep_talk',talk.includes(String(i)),`data-choice="${i}" class="choice"`)).join('')}
  ${talk.map(i=>`<div class="dialogue-history"><p>${esc(c.npc)}：${esc(c.lines[Number(i)+1])}</p></div>`).join('')}
+ ${talk.map(i=>button(`继续追问：${esc(c.questions[Number(i)])}`,'deep_followup',(d.followup?.[s.chapter]||[]).includes(String(i)),`data-choice="${i}" class="choice"`)).join('')}
+ ${(d.followup?.[s.chapter]||[]).map(i=>`<div class="dialogue-history"><p>${esc(c.npc)}：${esc(deepFollowups[s.chapter][Number(i)])}</p></div>`).join('')}
  ${talk.length&&interject&&companionInterjections[s.chapter]?`<div class="finding"><strong>${esc(interject)}插话</strong><p>${esc(companionInterjections[s.chapter])}</p>${d.interjection?.[s.chapter]!==undefined?'<p>回应已记入队伍记录。</p>':[button('支持伙伴','deep_interject',false,'data-choice="0"'),button('提出异议','deep_interject',false,'data-choice="1"'),button('保持沉默','deep_interject',false,'data-choice="2"')].join('')}</div>`:''}
  <div class="encounter"><strong>探索 · ${esc(c.object)}</strong><p>仔细检查这里留下的物证；成功会解锁一条隐藏线索及更稳妥的谈判路线。</p><p class="muted">${esc(c.skill)}检定 · DC ${c.dc}</p>${button(inspected?'已调查':'调查物证','deep_inspect',Boolean(inspected))}</div>
  ${d.explorationFlags?.[`${s.chapter}_secret`]?`<p class="finding">隐藏发现：${esc(c.secret)}</p>`:''}
+ ${inspected?`<h4>调查后的追问</h4>${['追查物证来历','比对另一份记录','商量下一步与证人安全'].map((label,i)=>button(label,'deep_debrief',(d.debrief?.[s.chapter]||[]).includes(String(i)),`data-choice="${i}" class="choice"`)).join('')}${(d.debrief?.[s.chapter]||[]).map(i=>`<div class="dialogue-history"><p>${esc(c.npc)}：${esc(deepFollowups[s.chapter][Number(i)+3])}</p></div>`).join('')}`:''}
  ${mine.is_host?`<div class="deep-routes"><h4>👑 队伍处理方式</h4><p>${route?`已记录：${esc(route)}。后续 NPC 和遭遇将读取这一决定。`:'证据与交涉可解决普通遭遇；失败时仍可按原路线继续。'}</p>
  ${button('以证据交涉 · D20','deep_route',Boolean(route), 'data-choice="0"')}
  ${button('正面突破','deep_route',Boolean(route),'data-choice="1"')}

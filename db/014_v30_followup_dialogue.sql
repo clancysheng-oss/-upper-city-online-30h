@@ -1,19 +1,35 @@
--- Server-owned chapter interactions extend the existing room state and combat.
-create table if not exists public.campaign_deep_chapters (
- chapter_id integer primary key references public.campaign_chapters(id),
- scene text not null, focus text not null, npc text not null, role text not null,
- lines jsonb not null, object_name text not null, secret text not null, skill text not null, dc integer not null
-);
-alter table public.campaign_deep_chapters enable row level security;
-revoke all on public.campaign_deep_chapters from public,anon,authenticated;
+-- v3.0 chapter-specific playable follow-up dialogue for existing saves.
 alter table public.campaign_deep_chapters add column if not exists followups jsonb not null default '[]'::jsonb;
-create table if not exists public.campaign_aftermath(
- chapter_id integer primary key references public.campaign_chapters(id),
- object_name text not null, narration text not null, clue text not null, item_name text not null, xp integer not null
-);
-alter table public.campaign_aftermath enable row level security;
-revoke all on public.campaign_aftermath from public,anon,authenticated;
-
+update public.campaign_deep_chapters set followups='["铁箱撞过车底三次，里面的东西像石板，不像活人。","倒钉蹄铁只在旧城驿站打制；你们可以按钉帽找匠人。","哈罗若肯留下口供，我会在换班前把马牵来。","水槽下那张收据写着第十三份草料，账房却只报十二份。","蹄铁外侧沾着高堂的白石灰，马车曾绕去修复室。","把收据交给哈罗，他能认出伪造车册的墨水。"]'::jsonb where chapter_id=0;
+update public.campaign_deep_chapters set followups='["封匣的人用了冷刀，怕蜡融化后显出里面的旧指纹。","付款者每年改姓，却始终写错同一条街的旧名。","艾尔不知道我是议员的旧友；我替一位证人保密至今。","蜡模背后的纹章属于曾出资修筑城钟的人家。","刀口里卡着今天的纸屑，说明名单刚被人抽走。","你们若要开匣，先让艾尔把每年的收据摊在一起。"]'::jsonb where chapter_id=1;
+update public.campaign_deep_chapters set followups='["灯芯沾的不是塔里的油，而是酒馆给信使防雨用的蜡。","蓝色玻璃向河边示警；红色才是催人上屋顶的诱饵。","我昨夜看到有人收走绳索，却留下第三塔的钥匙。","玻璃边缘刻着诺娅的旧暗号，她仍信任发信号的人。","废塔的梯子有新泥，追逐者比信使先到。","只要把两片玻璃叠起来，真正的会面地点会落在河岸。"]'::jsonb where chapter_id=2;
+update public.campaign_deep_chapters set followups='["空盘上留有主人从不吃的胡桃碎，侍者拿错了伪装。","送餐铃在主人失踪后仍响了三次，是有人故意报平安。","伊莱娅拿着第二份请柬；她比所有宾客都早知道问题。","菜单背面写着临时更换的主位侍者，不在原班表里。","通风道口有新擦痕，能传入演讲稿却运不走人。","先问侍者他端回了哪道菜，冒名者的说法就会露馅。"]'::jsonb where chapter_id=3;
+update public.campaign_deep_chapters set followups='["暗槽向井倾斜，最后会把地图送到城外而非主宅。","钥匙上的三户人家都还住着，却被契约列为空屋。","赛芙留假图是为了拖时间，她不肯让住户知道自己被卖。","井盖内侧的工匠记号与修复室出入簿相同。","水痕停在井的第二层，契约可能仍卡在格栅。","先通知三户居民，真图才能成为证据而非新的威胁。"]'::jsonb where chapter_id=4;
+update public.campaign_deep_chapters set followups='["木箱上涂了防雨钟油，里面却是铅封的地契压片。","便衣官员没给夜巡姓名，只给过桥铜牌。","若能匿名作证，其他搬运工也愿指认卸货棚。","蓝粉只用于议会文书，假零件的借口站不住。","钩柄上的工坊号能替工人证明是谁压成金属片。","不要把穆雷的铺子当藏身处，收账人正沿那条路来。"]'::jsonb where chapter_id=5;
+update public.campaign_deep_chapters set followups='["银桶灼伤只在碰水时疼，说明桶里是被稀释过的毒。","送货人手套上有高堂修复室的灰，不是园丁的泥。","塔姆愿作证，但我弟弟的工钱握在宅邸管事手里。","滤网里的白晶遇盐会变黑，可与井边废液对照。","水槽下还有未使用的银桶塞，编号没有被磨掉。","把样本交给奈米鉴定，贵族就不能称它为普通肥料。"]'::jsonb where chapter_id=6;
+update public.campaign_deep_chapters set followups='["新末句把求援改成遗嘱，读者会误以为议员已死。","那晚的跑腿人戴着军需仓的指套，编辑部没人认识他。","莉缇留着第一版排样，只怕公布后信使先遭追捕。","废铅字的缺角和新末句完全吻合。","报社账目记着一笔没有稿费名目的军费。","先找信使确认交接，再决定哪封遗言可以公开。"]'::jsonb where chapter_id=7;
+update public.campaign_deep_chapters set followups='["两队人的扣带系法不同，伪装者学了制服没学会规矩。","被诬士兵在摊前喝茶时钟声刚过九响。","维斯答应保护我孩子，我才愿认出那晚领队。","欠条旁有热杯印，时间比伪造换班令更早。","小巷墙上的擦痕来自运货箱，不是巡逻长戟。","让维斯带原件来，我会在他面前指认签名。"]'::jsonb where chapter_id=8;
+update public.campaign_deep_chapters set followups='["真章缺口被我填过铅，伪地契却拓出了填补前的样子。","蜡模能复制轮廓，复制不了石头里留下的铅纹。","阿黛要先安置三户住户，随后才肯组织公开辨认。","纪念碑背面的修补年月仍清晰可读。","假地契上的蜡色比它声称的日期新三十年。","把拓片贴在街坊议事屋，人人都能自己比对。"]'::jsonb where chapter_id=9;
+update public.campaign_deep_chapters set followups='["保证金从四个账户转入，最后都汇到同一个担保人。","面具买家根本没问价格，她在找谁敢认原始契约。","兰恩若知道账房交出凭证，拍卖还没结束我就得离城。","凭证上写着一间执政官外包账房的旧地址。","后台有两份目录，一份给买家，一份给追捕名单。","先取走名单，不然下一场拍卖会轮到证人。"]'::jsonb where chapter_id=10;
+update public.campaign_deep_chapters set followups='["伪牌能开门，却会让机械把离开者也登记为守塔人。","每十三转影子落在地砖缝，不在钟面上。","格雷修过机械的臂，却没碰藏纸的核心。","发条背面的顺序能让机械停一轮而不毁证据。","暗格里纸边有图书馆封蜡，可去赛洛那里比对。","停机后先护住格雷，他知道如何重新启动守塔钟。"]'::jsonb where chapter_id=11;
+update public.campaign_deep_chapters set followups='["被删选区的票数正好够推翻一次旧城表决。","烫痕不像水灾，像有人用热印压走姓名。","赛洛只让可信的人拿原件，我负责给居民看抄本。","页角的私人签注是议员习惯的左手钩，不是后补。","目录页码跳过的不是空页，而是一整条街。","让地下居民自己核对，任何官员都无法替他们说不存在。"]'::jsonb where chapter_id=12;
+update public.campaign_deep_chapters set followups='["白鸦沿河飞是为了避开广场的捕鸟网。","剪脚环的人把地址第一行读错，第二行仍藏在铜内。","菲恩被困的屋子没有锁，真正守住他的是看门人的名单。","内层刻的地址指向一间停用的议员信箱。","羽毛上的印泥属于大厅，不属于河边。","我可从后窗接菲恩，但你们得引开登记的守卫。"]'::jsonb where chapter_id=13;
+update public.campaign_deep_chapters set followups='["职务印记由多人轮用，死者签名只是掩护谁拿到柜钥匙。","莫罗离开收件室时，执政官办公室的灯才亮。","我曾替原案证人做登记，不想再看他们被写成无名者。","索引上同一页被借出两次，第二次没有归还签名。","收件簿缺页的纸纤维还留在柜缝。","拿着索引找莫罗，他至少得承认有人越过程序。"]'::jsonb where chapter_id=14;
+update public.campaign_deep_chapters set followups='["旧面具的裂纹来自驱逐那天砸落的门闩。","空白处写着姓名，但只有家人知道怎么看见。","萨雅挡得住巡逻，挡不住有人把孩子名字写进听证令。","内衬三道线对应三个仍住在水道的家族。","其中一张面具背后藏着原案听证日期。","答应隐去孩子姓名，我才会引你们见证人。"]'::jsonb where chapter_id=15;
+update public.campaign_deep_chapters set followups='["绿盐从护甲缝渗入，说明他们先穿甲再被迫守井。","样本里有工坊常用的染料，绝非井水自然变色。","奥里救人，我记录伤势；军令若销毁，两种证据仍在。","染料编号与高堂入库单多出的那一桶相同。","伤兵袖口留有写着倒水时辰的绳结。","先找出下令者的口音，再让伤兵在安全处辨认。"]'::jsonb where chapter_id=16;
+update public.campaign_deep_chapters set followups='["钟声使废液流进左侧缝隙，巨兽才会露出软甲。","石梯可藏两人，若全队上去会惊动井壁幼兽。","它冲向人是因为井口有人不断往下倒药。","绞盘仍能拉落灯架，先检查固定点。","检修路可绕过巨兽，却能看见谁把桶拖进井。","若决定交战，请给乌伦一个不靠近腐蚀水面的位子。"]'::jsonb where chapter_id=17;
+update public.campaign_deep_chapters set followups='["南线已封，送证人走那里就是把姓名交给追兵。","证人的家人尚在高堂修复室，他们怕被分开押送。","法官愿出庭，只要你们在撤离时守住彼此。","名单中有一个被划掉的出口，其实还能从酒馆进入。","两名证人的口供日期相隔一夜，是被分别关押过。","别把路线写在公开告示上，让赛洛保管一份密本。"]'::jsonb where chapter_id=18;
+update public.campaign_deep_chapters set followups='["议员烧证词时先把写页者送走，他说的保护有一半是真。","他仍隐瞒谁下了命令，这一半需要当面追问。","若你们赦免他，请让他亲自面对留下来的证人。","显字药水只在左侧灯照时留下字，信里有见面日期。","台座底的刮痕表明信曾被人取出又放回。","拿信去问埃弗，他不能再只谈动机而不谈名字。"]'::jsonb where chapter_id=19;
+update public.campaign_deep_chapters set followups='["刺客借镜灯熄灭穿过人群，只有一面镜仍亮着。","鞋泥混着军械库碎石，像有人故意让他被查到。","菲娅带证人走的暗门每次只能撑十息。","镜轴反光会把侧廊的人影投到听证席下。","撤离图上的旧路线与法官给的路线同出一手。","先把证人送走，再拿图询问谁复制了它。"]'::jsonb where chapter_id=20;
+update public.campaign_deep_chapters set followups='["新铜丝带着私人办公室的蜡封，行会从没领过。","停钟让每张换班表在同一时刻失去先后顺序。","改革派要我只修大厅的钟，地下报时仍会停。","绝缘环可让一座钟先响，足够召来街区证人。","铜丝接头上有两个人的指纹，不止一位官员动手。","恢复钟声前先告诉杜伦，你们决定让哪些人听见。"]'::jsonb where chapter_id=21;
+update public.campaign_deep_chapters set followups='["检修门原为工人留路，卫队从没拿到外侧钥匙。","施工图能证明封桥令只管桥面，不管下方安全通道。","新兵大多不知命令是假；别让他们为发令者流血。","门轴能从内侧松开，但需有人在桥上拖住卫队。","图纸上还标了雨水季会淹的岔路。","若露佩愿帮忙，工人能从干燥的一侧引你们过去。"]'::jsonb where chapter_id=22;
+update public.campaign_deep_chapters set followups='["火从馆员宿舍先起，纵火者想逼我们离开档案室。","原件搬到窗边，是为了便于他们从外侧夺走。","梅瑞还在楼上数人；我不能替她决定放弃谁。","水闸一关，火油就烧不到存票墙。","油瓶里留下雇佣兵领取火油的时辰。","先把孩子带出抄本柜，之后我才敢回去取原件。"]'::jsonb where chapter_id=23;
+update public.campaign_deep_chapters set followups='["拒绝旁听的两份方案都让旧地主保留否决权。","地下代表要的是席位，不是贵族允许的发言时间。","露佩肯在公约写进居民监督，我就愿记录票数。","公约空白处可把被删街区重新列为选区。","若当天只有代表签名，明日街坊会要求重来。","把共同底线写成能让孩子读懂的句子，再投票。"]'::jsonb where chapter_id=24;
+update public.campaign_deep_chapters set followups='["背面墨水干在贵族印记之前，顺序无法倒过来。","被抹姓名中的一位后代仍在地下，需要自己认领。","鉴定章只证明纸，不替任何派系背书。","水印与第一夜运来的旧纸同厂，契约或曾被调包。","边角的两种针孔说明它长期与另一份案卷装订。","把原件放在各派都能看见的桌上，再请希尔宣布年代。"]'::jsonb where chapter_id=25;
+update public.campaign_deep_chapters set followups='["一份命令守前门，另一份要我带人堵证人退路。","原件在盔甲夹层，铁卫队长未必看过它。","凯尔想放下武器，却需要有人给部下解释真相。","夹层纸边有未干的假印泥，改令发生在今天。","新兵的领粮表证明他们并未参加伪造会议。","公开两份日期，让凯尔自己命令部下后退。"]'::jsonb where chapter_id=26;
+update public.campaign_deep_chapters set followups='["孩子在桌下听见了付款人的名字，不能让佣兵发现。","娜芙守左门，右侧柱廊还能容一队人离开。","若档案烧毁，幸存者又要被说成不存在。","绳索挂在吊灯横梁上，可压住冲入侧翼的佣兵。","火油桶底有公款封印，雇佣不是私人恩怨。","先救人，再把契约袋交给罗温当众宣读。"]'::jsonb where chapter_id=27;
+update public.campaign_deep_chapters set followups='["被删街区的签名一张纸写不完，我分成三册带来。","罗温愿记录，却要有人先把地下代表带进席位。","自治若不允许外来孩子登记，旧错误会换个名字回来。","签名册有活着的旧案见证人，不只是后代。","册子背面写着每户愿承担的街道维护义务。","让各派回答谁可以投票，再谈制度叫什么。"]'::jsonb where chapter_id=28;
+update public.campaign_deep_chapters set followups='["雨夜的车是秘密，如今有人愿在报纸上署名说出真相。","判决让一部分人得房，一部分人担忧没有工作。","伊莱娅说编年史要保留质疑者，未来才能纠正我们。","更正声明列出以前被删掉的三名证人。","报纸背面留了公开申诉的地址，不能再只有密函。","你们可以把这份报纸放进队伍的编年史，而不替城市写完结局。"]'::jsonb where chapter_id=29;
 create or replace function public.party_deep(p_code text,p_action text,p_payload jsonb default '{}'::jsonb)
 returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
 declare
@@ -204,67 +220,3 @@ end $$;
 revoke all on function public.party_deep(text,text,jsonb) from public,anon,authenticated;
 grant execute on function public.party_deep(text,text,jsonb) to authenticated;
 
--- Only new encounters are scaled. Old combats and saved checkpoints retain their exact HP.
-create or replace function public.campaign_v30_combat() returns trigger language plpgsql security definer set search_path=public,pg_temp as $$
-declare v_old jsonb; v_new jsonb; v_enemies jsonb; v_foe jsonb; v_ch integer; v_avg numeric; v_rank integer; v_scale integer; v_hp integer; v_idx integer; v_env jsonb; v_refused bigint;
-begin
- v_old:=old.state->'combat'; v_new:=new.state->'combat';
- new.state:=jsonb_set(new.state,'{deep}',
-   '{"talk":{},"inspected":{},"storyFlags":{},"companionApproval":{},"route":{},"explorationFlags":{},"combat":{},"aftermath":{},"followup":{},"debrief":{}}'::jsonb
-     ||coalesce(new.state->'deep','{}'::jsonb));
- if v_old is not null and v_old<>'null'::jsonb and coalesce((v_old->>'hp')::integer,0)>0
-    and v_new is not null and v_new<>'null'::jsonb and coalesce((v_new->>'hp')::integer,0)=0 then
-   new.state:=jsonb_set(new.state,array['deep','combat',coalesce(v_old->>'side_quest',new.state->>'chapter','0')],
-     jsonb_build_object('combat_required',true,'combat_resolved',true,'combat_skipped',false),true);
- end if;
- if v_new is null or v_new='null'::jsonb or coalesce((v_new->>'hp')::integer,0)<=0
-    or (v_old is not null and v_old<>'null'::jsonb and coalesce((v_old->>'hp')::integer,0)>0) then return new; end if;
- v_ch:=coalesce((new.state->>'chapter')::integer,0);
- select coalesce(avg(level),1) into v_avg from public.players where room_code=new.room_code and user_id is not null;
- v_enemies:=v_new->'enemies';
- if v_enemies is null then return new; end if;
- for v_idx in 0..jsonb_array_length(v_enemies)-1 loop
-   v_foe:=v_enemies->v_idx;
-   v_rank:=case when v_idx=0 and v_ch in (17,28) then 3 when v_idx=0 then 2 else 1 end;
-   -- Chapter floor + capped party contribution: returning to early areas remains easier.
-   v_scale:=least(5,greatest(0,floor(v_avg-(1+floor(v_ch/5.0)))::integer))
-     +case when v_ch>=20 then 2 when v_ch>=10 then 1 else 0 end;
-   v_hp:=(v_foe->>'hp')::integer+v_scale*(2+2*v_rank);
-   v_foe:=jsonb_set(jsonb_set(v_foe,'{hp}',to_jsonb(v_hp)),'{max_hp}',to_jsonb(v_hp));
-   v_foe:=jsonb_set(v_foe,'{attack_bonus}',to_jsonb((v_foe->>'attack_bonus')::integer+floor(v_scale*v_rank/3.0)::integer));
-   v_foe:=jsonb_set(v_foe,'{damage_min}',to_jsonb((v_foe->>'damage_min')::integer+floor(v_scale*v_rank/4.0)::integer));
-   v_foe:=jsonb_set(v_foe,'{ac}',to_jsonb(least(21,(v_foe->>'ac')::integer+floor(v_scale*v_rank/5.0)::integer)));
-   v_enemies:=jsonb_set(v_enemies,array[v_idx::text],v_foe);
- end loop;
- v_env:=case when v_ch>=23 then jsonb_build_array(
-   jsonb_build_object('name','火油桶','kind','blast','amount',8,'used',false),
-   jsonb_build_object('name','石柱掩体','kind','cover','amount',3,'used',false),
-   jsonb_build_object('name','城门闸轮','kind','block','amount',1,'used',false))
-  when v_ch>=15 then jsonb_build_array(
-   jsonb_build_object('name','火药桶','kind','blast','amount',8,'used',false),
-   jsonb_build_object('name','城门机关','kind','cover','amount',3,'used',false),
-   jsonb_build_object('name','井壁悬崖','kind','push','amount',0,'used',false))
-  else jsonb_build_array(
-   jsonb_build_object('name','油桶','kind','blast','amount',6,'used',false),
-   jsonb_build_object('name','石墙掩体','kind','cover','amount',2,'used',false),
-   jsonb_build_object('name','松动支撑','kind','blast','amount',5,'used',false)) end;
- v_new:=jsonb_set(jsonb_set(v_new,'{enemies}',v_enemies),'{environment}',v_env);
- v_new:=jsonb_set(jsonb_set(v_new,'{hp}',to_jsonb(public.campaign_enemy_hp(v_enemies))),'{max_hp}',to_jsonb(public.campaign_enemy_hp(v_enemies)));
- new.state:=jsonb_set(new.state,array['deep','combat',coalesce(v_new->>'side_quest',v_ch::text)],
-   jsonb_build_object('combat_required',true,'combat_resolved',false,'combat_skipped',false),true);
- -- A companion can refuse this fight without leaving the party or losing HP.
- if coalesce(new.state#>>array['deep','storyFlags',(v_ch-1)::text||'_force'],'false')='true'
-    and v_ch not in (17,28) then
-   select p.id into v_refused from public.players p where p.room_code=new.room_code and p.is_companion
-     and coalesce((new.state#>>array['deep','companionApproval',p.id::text])::integer,0)<0 order by p.id limit 1;
-   if v_refused is not null then
-     v_new:=jsonb_set(v_new,'{refusing}',jsonb_build_array(v_refused));
-     v_new:=jsonb_set(v_new,'{initiative}',coalesce((select jsonb_agg(e.item order by e.ord) from jsonb_array_elements(v_new->'initiative') with ordinality e(item,ord) where (e.item->>'id')::bigint<>v_refused),'[]'::jsonb));
-     if (v_new->>'turn')::bigint=v_refused then v_new:=jsonb_set(v_new,'{turn}',v_new->'initiative'->0->'id'); end if;
-   end if;
- end if;
- new.state:=jsonb_set(new.state,'{combat}',v_new);
- return new;
-end $$;
-drop trigger if exists campaign_v30_combat on public.game_states;
-create trigger campaign_v30_combat before update of state on public.game_states for each row execute function public.campaign_v30_combat();
