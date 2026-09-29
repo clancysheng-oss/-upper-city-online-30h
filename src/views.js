@@ -4,6 +4,8 @@ import { dialogues } from "./dialogues.js";
 import { merchants, items } from "./merchants.js";
 import { battleByChapter } from "./battles.js";
 import { powers, spellcasters } from "./powers.js";
+import { wondersGoods, companionProfile } from "./areas.js";
+import { mapView, areaView, questJournal, sideBattleArt } from "./areas-view.js";
 export const esc = (s) =>
   String(s ?? "").replace(
     /[&<>"']/g,
@@ -15,7 +17,7 @@ export const esc = (s) =>
 export const button = (label, action, disabled = false, extra = "") =>
   `<button data-act="${action}" ${extra} ${disabled ? "disabled" : ""}>${label}</button>`;
 export function character(p) {
-  return `<strong>${esc(p.name)} · ${esc(p.class_name)} · ${p.level || 1} 级</strong><p>HP ${p.hp}/${p.max_hp} · AC ${p.ac} · ${p.gold} 金币</p><div class="stats">${["力量", "敏捷", "体质", "智力", "感知", "魅力"].map((s, i) => `<span>${s} ${p.stats[i]}</span>`).join("")}</div><p>装备：${esc(p.equipment.join("、"))}<br>背包：${esc(p.inventory.join("、") || "空")}</p>${p.hp === 0 ? `<p class="error">倒地 · 死亡豁免成功 ${p.death_successes}/3，失败 ${p.death_failures}/3 ${p.death_failures >= 3 ? "· 死亡" : ""}</p>` : ""}`;
+  return `<strong>${p.is_companion ? "🤝 伙伴 · " : ""}${esc(p.name)} · ${esc(p.class_name)} · ${p.level || 1} 级</strong><p>HP ${p.hp}/${p.max_hp} · AC ${p.ac} · ${p.gold} 金币 · ${p.experience||0} XP</p><div class="stats">${["力量", "敏捷", "体质", "智力", "感知", "魅力"].map((s, i) => `<span>${s} ${p.stats[i]}</span>`).join("")}</div><p>装备：${esc(p.equipment.join("、"))}<br>背包：${esc(p.inventory.join("、") || "空")}</p>${p.hp === 0 ? `<p class="error">倒地 · 死亡豁免成功 ${p.death_successes}/3，失败 ${p.death_failures}/3 ${p.death_failures >= 3 ? "· 死亡" : ""}</p>` : ""}`;
 }
 function dialogueView(s) {
   const scene = dialogues[s.chapter],
@@ -45,12 +47,13 @@ function choiceView(s, chapter, mine, combat) {
 function battleView(s, players, mine) {
   const c = s.combat;
   if (!c) return "";
-  const art = battleByChapter.get(s.chapter)?.art;
+  const sideArt=sideBattleArt(s);
+  const art = sideArt?`/images/area-${sideArt.id.replaceAll('_','-')}.webp`:battleByChapter.get(s.chapter)?.art;
   const fighting = c.hp > 0;
   const foes = c.enemies || [
     { name: c.name, hp: c.hp, max_hp: c.max_hp, ac: c.ac },
   ];
-  return `<section class="card battle-stage" id="battle"><div class="battle-heading"><p class="muted">⚔️ 第 ${c.round} 回合 · ${fighting ? "战斗中" : "胜利"}</p><h2>${esc(c.name)}</h2><p>${esc(battleByChapter.get(s.chapter)?.intro || "")}</p></div>${art ? `<img class="battle-banner" src="${art}" alt="${esc(c.name)}战斗场景">` : ""}<div class="enemy-grid">${foes.map((foe, i) => `<div class="enemy ${foe.hp <= 0 ? "defeated" : ""}"><strong>${esc(foe.name)}</strong><p>HP ${foe.hp}/${foe.max_hp} · AC ${foe.ac}</p><div class="hpbar"><span style="width:${Math.max(0, Math.min(100, (foe.hp / foe.max_hp) * 100))}%"></span></div>${foe.hp <= 0 ? "<small>已击倒</small>" : ""}</div>`).join("")}</div><p class="turn-indicator">${fighting ? `当前行动：${esc(players.find((p) => p.id === c.turn)?.name || "等待救援")}` : "敌方全灭，可以继续调查与推进"}</p><div class="battle-actions"><label>攻击目标<select id="attackTarget">${foes.map((foe, i) => `<option value="${i}" ${foe.hp <= 0 ? "disabled" : ""}>${esc(foe.name)} · HP ${foe.hp}/${foe.max_hp}</option>`).join("")}</select></label>${button("⚔️ 攻击选中敌人", "attack", !fighting || c.turn !== mine.id || mine.hp <= 0)}<label>药水目标<select id="healTarget">${players.map((p) => `<option value="${p.id}" ${p.id === mine.id ? "selected" : ""}>${esc(p.name)} · HP ${p.hp}/${p.max_hp}</option>`).join("")}</select></label>${button("使用治疗药水", "heal", !mine.inventory.includes("治疗药水") || (fighting && c.turn !== mine.id))}${mine.hp === 0 ? button("死亡豁免", "death_save", mine.death_failures >= 3) : ""}</div></section>`;
+  return `<section class="card battle-stage" id="battle"><div class="battle-heading"><p class="muted">⚔️ 第 ${c.round} 回合 · ${fighting ? "战斗中" : "胜利"}</p><h2>${esc(c.name)}</h2><p>${esc(sideArt?.intro || battleByChapter.get(s.chapter)?.intro || "")}</p></div>${art ? `<img class="battle-banner" src="${art}" alt="${esc(c.name)}战斗场景">` : ""}<div class="enemy-grid">${foes.map((foe, i) => `<div class="enemy ${foe.hp <= 0 ? "defeated" : ""}"><strong>${esc(foe.name)}</strong><p>HP ${foe.hp}/${foe.max_hp} · AC ${foe.ac}</p><div class="hpbar"><span style="width:${Math.max(0, Math.min(100, (foe.hp / foe.max_hp) * 100))}%"></span></div>${foe.hp <= 0 ? "<small>已击倒</small>" : ""}</div>`).join("")}</div><p class="turn-indicator">${fighting ? `当前行动：${esc(players.find((p) => p.id === c.turn)?.name || "等待救援")}` : "敌方全灭，可以继续调查与推进"}</p><div class="battle-actions"><label>攻击目标<select id="attackTarget">${foes.map((foe, i) => `<option value="${i}" ${foe.hp <= 0 ? "disabled" : ""}>${esc(foe.name)} · HP ${foe.hp}/${foe.max_hp}</option>`).join("")}</select></label>${button("⚔️ 攻击选中敌人", "attack", !fighting || c.turn !== mine.id || mine.hp <= 0)}${players.filter(p=>p.is_companion).map(p=>`${button(`🏹 ${esc(p.name)}射击`,"companion_attack",!fighting||c.turn!==p.id||p.hp<=0,`data-companion="${p.id}"`)}${button("✨ 棱光箭", "companion_skill",!fighting||c.turn!==p.id||p.hp<=0||p.ability_charges<1,`data-companion="${p.id}"`)}`).join("")}<label>药水目标<select id="healTarget">${players.map((p) => `<option value="${p.id}" ${p.id === mine.id ? "selected" : ""}>${esc(p.name)} · HP ${p.hp}/${p.max_hp}</option>`).join("")}</select></label>${button("使用治疗药水", "heal", !mine.inventory.includes("治疗药水") || (fighting && c.turn !== mine.id))}${mine.hp === 0 ? button("死亡豁免", "death_save", mine.death_failures >= 3) : ""}</div></section>`;
 }
 function powersView(mine, s, combat, players) {
   const known = powers.filter(
@@ -87,7 +90,7 @@ function merchantView(mine, chapter, flags, fighting) {
     .join("")}<h4>背包装备</h4>${
     mine.inventory
       .filter((name) =>
-        items.some((i) => i.name === name && i.slot !== "consumable"),
+        [...items,...wondersGoods].some((i) => i.name === name && i.slot !== "consumable"),
       )
       .map(
         (name) =>
@@ -96,20 +99,20 @@ function merchantView(mine, chapter, flags, fighting) {
       .join("") || '<p class="muted">暂时没有可装备物品。</p>'
   }</section>`;
 }
-export function renderGame(data, error) {
+export function renderGame(data, error, selectedArea=null) {
   const s = data.state,
     mine = data.players.find((p) => p.id === data.me),
     chapter = chapters[Math.min(s.chapter || 0, 29)],
     flags = s.flags || [],
     combat = s.combat;
-  return `${battleView(s, data.players, mine)}<div class="grid"><div><section class="card story-card"><p class="muted">${esc(chapter.act)} · 第 ${chapter.id + 1}/30 章</p><h2>${esc(chapter.title)}</h2><p class="story-lead">${esc(chapter.lead)}</p><p>${esc(contextualText(chapter, flags))}</p>${dialogueView(s)}${exploreView(s)}${choiceView(s, chapter, mine, combat)}</section><section class="card"><h3>自由行动与检定</h3><textarea id="chat" maxlength="500" placeholder="描述角色的行动、对白或计划"></textarea><div class="row">${button("发送行动", "chat")}<select id="skill" style="width:auto;margin:0">${["调查", "洞悉", "说服", "潜行", "运动", "奥秘", "求生"].map((x) => `<option>${x}</option>`).join("")}</select><input id="dc" type="number" value="15" min="5" max="30" title="难度 DC" style="width:72px;margin:0">${button("D20 检定", "roll")}</div></section><section class="card"><h3>队伍行动记录</h3><div class="log">${[
+  return `${battleView(s, data.players, mine)}${mapView(s,selectedArea)}${selectedArea&&error?`<p class="error">${esc(error)}</p>`:""}<div class="grid"><div>${selectedArea?areaView(data,selectedArea):`<section class="card story-card"><p class="muted">${esc(chapter.act)} · 第 ${chapter.id + 1}/30 章</p><h2>${esc(chapter.title)}</h2><p class="story-lead">${esc(chapter.lead)}</p><p>${esc(contextualText(chapter, flags))}</p>${dialogueView(s)}${exploreView(s)}${choiceView(s, chapter, mine, combat)}</section>`}<section class="card"><h3>自由行动与检定</h3><textarea id="chat" maxlength="500" placeholder="描述角色的行动、对白或计划"></textarea><div class="row">${button("发送行动", "chat")}<select id="skill" style="width:auto;margin:0">${["调查", "洞悉", "说服", "潜行", "运动", "奥秘", "求生"].map((x) => `<option>${x}</option>`).join("")}</select><input id="dc" type="number" value="15" min="5" max="30" title="难度 DC" style="width:72px;margin:0">${button("D20 检定", "roll")}</div></section><section class="card"><h3>队伍行动记录</h3><div class="log">${[
     ...data.messages,
   ]
     .reverse()
     .map((m) => `<p><strong>${esc(m.sender)}</strong>：${esc(m.body)}</p>`)
     .join(
       "",
-    )}</div></section></div><aside><section class="card"><h3>队伍角色</h3>${data.players.map((p) => `<div class="member">${p.is_host ? "👑 " : ""}${character(p)}</div>`).join("")}<div class="row">${button("离开", "leave")}${button("接任离线房主", "claim")}</div></section><section class="card"><h3>任务与线索</h3><p>主线：${esc(chapter.title)}</p><p>已完成章节 ${(s.completed_quests || []).length}/30</p>${sideQuests
+    )}</div></section></div><aside><section class="card"><h3>队伍角色</h3>${data.players.map((p) => `<div class="member">${p.is_host ? "👑 " : ""}${character(p)}</div>`).join("")}${data.players.some(p=>p.is_companion)?`<p class="muted">${esc(companionProfile.race)} · ${esc(companionProfile.background)}<br>${esc(companionProfile.active)}<br>${esc(companionProfile.passive)}</p>`:""}<div class="row">${button("离开", "leave")}${button("接任离线房主", "claim")}</div></section><section class="card"><h3>任务与线索</h3><p>主线：${esc(chapter.title)}</p><p>已完成章节 ${(s.completed_quests || []).length}/30</p>${sideQuests
     .filter((q) => chapter.id >= q.from && chapter.id <= q.to)
     .map(
       (q) =>
@@ -117,5 +120,5 @@ export function renderGame(data, error) {
     )
     .join(
       "",
-    )}${(s.clues || []).map((c) => `<span class="tag">${esc(c)}</span>`).join("") || '<p class="muted">尚未发现线索</p>'}</section>${powersView(mine, s, combat, data.players)}${merchantView(mine, chapter.id, flags, combat?.hp > 0)}<p class="error">${esc(error)}</p></aside></div>`;
+    )}${(s.clues || []).map((c) => `<span class="tag">${esc(c)}</span>`).join("") || '<p class="muted">尚未发现线索</p>'}${questJournal(s)}</section>${powersView(mine, s, combat, data.players)}${merchantView(mine, chapter.id, flags, combat?.hp > 0)}<p class="error">${esc(error)}</p></aside></div>`;
 }

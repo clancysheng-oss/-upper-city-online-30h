@@ -2,6 +2,7 @@ import { renderGame } from "../src/views.js";
 import { dialogues } from "../src/dialogues.js";
 import { battles } from "../src/battles.js";
 import { items, merchants } from "../src/merchants.js";
+import { areas, areaNpcs, areaQuests, wondersGoods } from "../src/areas.js";
 import assert from "node:assert/strict";
 const player = {
   id: 1,
@@ -77,3 +78,14 @@ assert(merchants.length === 6 && items.length >= 12);
 console.log(
   "UI FLOW PASS: dialogue gates, main-screen squads, chapter merchants and artwork",
 );
+
+base.state.chapter=0;base.state.combat=null;
+html=renderGame(base,'','kegs');
+assert(html.includes('三只旧酒桶')&&html.includes('吃炖菜')&&html.includes('玛拉·雾杯')&&html.includes('接取支线'));
+html=renderGame(base,'','wonders');
+assert(html.includes('护盾卷轴')&&html.includes('高堂武器、装备与魔法商店'));
+assert(html.includes('🔒 尚未解锁'));
+base.state.chapter=16;html=renderGame(base,'','walls');
+assert(html.includes('上城区城墙')&&html.includes('凯文·远炬'));
+assert(areas.length===4&&areaNpcs.length===12&&areaQuests.length===5&&wondersGoods.length>=12);
+console.log('AREA UI PASS: images, locked map, named NPCs, tavern, magical shop and quest journal');
