@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const db=new PGlite();
 await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql as $$ select current_setting('app.uid',true)::uuid $$;create publication supabase_realtime;create function gen_random_bytes(int) returns bytea language sql as $$ select decode(substr(md5(random()::text),1,$1*2),'hex') $$;");
-for(const f of ['supabase.sql','upgrade.sql','db/002_secure_campaign.sql','db/003_encounters.sql','db/004_campaign_battles.sql','db/005_classes_spells.sql','db/006_deeper_campaign.sql','db/007_upper_city_areas.sql','db/008_v21_combat_story.sql','db/009_v21_dialogue_polish.sql','db/010_v22_save_slots.sql','db/011_xp_progression.sql','db/012_v30_story_depth.sql','db/013_v30_battle_aftermath.sql','db/014_v30_followup_dialogue.sql','db/015_v30_encounter_routes.sql','db/016_v31_stability_finale.sql'])await db.exec(fs.readFileSync(f,'utf8').replace('create extension if not exists pgcrypto;',''));
+for(const f of ['supabase.sql','upgrade.sql','db/002_secure_campaign.sql','db/003_encounters.sql','db/004_campaign_battles.sql','db/005_classes_spells.sql','db/006_deeper_campaign.sql','db/007_upper_city_areas.sql','db/008_v21_combat_story.sql','db/009_v21_dialogue_polish.sql','db/010_v22_save_slots.sql','db/011_xp_progression.sql','db/012_v30_story_depth.sql','db/013_v30_battle_aftermath.sql','db/014_v30_followup_dialogue.sql','db/015_v30_encounter_routes.sql','db/016_v31_stability_finale.sql','db/017_v31_saved_room_lobby.sql'])await db.exec(fs.readFileSync(f,'utf8').replace('create extension if not exists pgcrypto;',''));
 const u=['00000000-0000-0000-0000-0000000000a1','00000000-0000-0000-0000-0000000000a2','00000000-0000-0000-0000-0000000000a3'];
 for(const id of u)await db.query('insert into auth.users(id) values($1)',[id]);
 async function as(i,sql,args=[]){await db.query("select set_config('app.uid',$1,false)",[u[i]]);return (await db.query(sql,args)).rows[0]?.v}
@@ -15,6 +15,7 @@ const room=a.room;
 await cmd(1,room,'join',{name:'米娅',class:'牧师'});
 await cmd(2,room,'join',{name:'洛安',class:'游侠'});
 assert.equal((await snap(0,room)).players.length,3);
+assert.equal((await snap(1,room)).saved_room,true);
 await cmd(1,room,'leave');
 assert.deepEqual((await snap(0,room)).players.map(p=>p.name),['克兰西','洛安']);
 assert.equal((await as(0,"select public.party_v31_slots() v")).length,2);
