@@ -6,20 +6,22 @@ const regionChanges={
  hall:['书记员低声讨论旧印，听证席尚未开放。','官员争抢证据的署名权，维莎开始要求每份口供都有活着的证人。','旁听席坐满了工人与地下居民，公开的投票比任何命令都更难撤回。'],
  walls:['巡灯依次亮起，士兵还把暗门的泥印当作寻常雨痕。','受伤的斥候回到墙内，凯文亲自核对每一班的换岗表。','箭袋分给临时守城的居民，瑞奥娜把水轮改成阻止援军闯入的闸。']
 };
-function regionLine(id,state){const phase=state.chapter<10?0:state.chapter<20?1:2;return regionChanges[id]?.[phase]||'';}
+function regionPhase(state){return state.chapter<10?0:state.chapter<20?1:2;}
+function regionLine(id,state){return regionChanges[id]?.[regionPhase(state)]||'';}
+function regionArt(id,state){const phase=regionPhase(state);return `/images/area-${id}${phase===0?'':phase===1?'-mid':'-late'}.webp`;}
 export function mapView(state,selected){
  const questStates=state.side_quests||{};
  return `<section class="card city-map"><div class="step-title"><h2>上城区 · 可探索区域</h2><small>酒馆与高堂常驻；大厅与城墙随主线解锁</small></div>${state.chapter===10?'<p class="good">新区域已解锁：至高大厅</p>':state.chapter===15?'<p class="good">新区域已解锁：上城区城墙</p>':''}<div class="area-grid">${areas.map(a=>{
   const open=state.chapter>=a.unlock;
   const relevant=areaQuests.filter(q=>q.area===a.id||q.stages[questStates[q.id]?.step]?.area===a.id);
   const marker=relevant.some(q=>questStates[q.id]?.status==='可交付'&&q.stages.at(-1).area===a.id)?'✓':relevant.some(q=>questStates[q.id]?.status==='进行中'&&q.stages[questStates[q.id].step]?.area===a.id)?'任务标记':relevant.some(q=>!questStates[q.id]&&q.area===a.id)?'!':'';
-  return `<div class="area-tile ${selected===a.id?'active':''}"><img src="/images/area-${a.id}.webp" alt="${esc(a.name)}场景"><div><h3>${esc(a.name)} ${open?marker:'🔒'}</h3><p>${esc(regionLine(a.id,state))}</p>${button(open?(selected===a.id?'正在探索':'进入'):'🔒 尚未解锁','enter_area',!open,`data-area="${a.id}"`)}</div></div>`;}).join('')}</div></section>`;
+  return `<div class="area-tile ${selected===a.id?'active':''}"><img src="${regionArt(a.id,state)}" alt="${esc(a.name)}当前时期场景" loading="lazy"><div><h3>${esc(a.name)} ${open?marker:'🔒'}</h3><p>${esc(regionLine(a.id,state))}</p>${button(open?(selected===a.id?'正在探索':'进入'):'🔒 尚未解锁','enter_area',!open,`data-area="${a.id}"`)}</div></div>`;}).join('')}</div></section>`;
 }
 export function areaView(data,id){
  const a=areas.find(x=>x.id===id),s=data.state,mine=data.players.find(p=>p.id===data.me);
  if(!a||s.chapter<a.unlock)return '';
  const npc=areaNpcs.filter(n=>n.area===id),records=s.side_quests||{};
- return `<section class="card area-stage" id="region"><img class="area-banner" src="/images/area-${id}.webp" alt="${esc(a.name)}场景"><div class="area-caption"><p class="muted">UPPER CITY · ${esc(a.name)}</p><h2>${esc(a.name)}</h2><p>${esc(a.description)}</p>${button('← 返回上城区主界面','leave_area')}</div><h3>调查地点</h3><div class="explore-grid">${a.places.map(([title,desc],i)=>`<div class="encounter"><strong>${esc(title)}</strong><p>${esc(desc)}</p>${button((s.area_inspected||[]).includes(`${id}:${i}`)?'已调查':'调查 · D20','area_inspect',(s.area_inspected||[]).includes(`${id}:${i}`),`data-area="${id}" data-place="${i}"`)}</div>`).join('')}</div><h3>区域人物</h3><div class="area-npcs">${npc.map(n=>{
+ return `<section class="card area-stage" id="region"><img class="area-banner" src="${regionArt(id,s)}" alt="${esc(a.name)}当前时期场景"><div class="area-caption"><p class="muted">UPPER CITY · ${esc(a.name)}</p><h2>${esc(a.name)}</h2><p>${esc(a.description)} ${esc(regionLine(id,s))}</p>${button('← 返回上城区主界面','leave_area')}</div><h3>调查地点</h3><div class="explore-grid">${a.places.map(([title,desc],i)=>`<div class="encounter"><strong>${esc(title)}</strong><p>${esc(desc)}</p>${button((s.area_inspected||[]).includes(`${id}:${i}`)?'已调查':'调查 · D20','area_inspect',(s.area_inspected||[]).includes(`${id}:${i}`),`data-area="${id}" data-place="${i}"`)}</div>`).join('')}</div><h3>区域人物</h3><div class="area-npcs">${npc.map(n=>{
   const attitude=(s.area_attitudes||{})[n.id]||0;
   const history=(s.area_dialogue||[]).filter(h=>h.npc===n.id).slice(-3);
   const completed=areaQuests.filter(q=>q.giver===n.id&&records[q.id]?.status==='已完成');
