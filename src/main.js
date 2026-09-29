@@ -18,7 +18,9 @@ function render(){
   // Preserve editable form values when rebuilding the shared game view.
   const ids=['chat','skill','dc','power','slot','powerTarget','enemyTarget','attackTarget','healTarget'];
   const edits=ids.map(id=>[id,root.querySelector(`#${id}`)?.value]).filter(([,value])=>value!==undefined);
+  const openDetails=new Set([...root.querySelectorAll('details[data-detail][open]')].map(el=>el.dataset.detail));
   if(!data)home();else if(data.state.started)game();else lobby();
+  for(const detail of root.querySelectorAll('details[data-detail]'))detail.open=openDetails.has(detail.dataset.detail);
   for(const [id,value] of edits){const field=root.querySelector(`#${id}`);if(field&&(field.tagName!=='SELECT'||[...field.options].some(o=>o.value===value)))field.value=value;}
   for(const id of ['attackTarget','enemyTarget']){
     const field=root.querySelector(`#${id}`);
