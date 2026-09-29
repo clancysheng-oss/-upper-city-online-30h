@@ -27,4 +27,4 @@ The 30 original chapters include three primary NPC dialogue decisions, two origi
 
 ## v3.0 migration
 
-Apply `db/012_v30_story_depth.sql` after `db/011_xp_progression.sql` before deploying the matching frontend. Rebuild it after editing `src/deep-story.js` with `npm run v30:sql`. New state is stored in the existing room state JSON; old save slots load with empty defaults. The migration keeps the existing room, player, quest, merchant, chapter and save tables.
+Apply `db/012_v30_story_depth.sql` after `db/011_xp_progression.sql`, then `db/013_v30_battle_aftermath.sql`, before deploying the matching frontend. Rebuild both after editing `src/deep-story.js` or `src/battle-aftermath.js` with `npm run v30:sql`. New state is stored in the existing room state JSON; old save slots load with empty defaults. The migrations keep the existing room, player, quest, merchant, chapter and save tables. Battle aftermaths provide one server-owned investigation and unique clue/item plus XP to each player; only the actual victor can collect it once.

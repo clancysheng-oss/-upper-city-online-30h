@@ -1,11 +1,18 @@
 import fs from 'node:fs';
 import {deepChapters} from '../src/deep-story.js';
+import {battleAftermath} from '../src/battle-aftermath.js';
 const quote=s=>"'"+String(s).replaceAll("'","''")+"'";
 let sql=fs.readFileSync('db/v30-functions.sql','utf8');
+const aftermathSchema=sql.slice(sql.indexOf('create table if not exists public.campaign_aftermath'),sql.indexOf('create or replace function public.party_deep'));
 const seeds=deepChapters.map(c=>`insert into public.campaign_deep_chapters(chapter_id,scene,focus,npc,role,lines,object_name,secret,skill,dc)
  values(${c.id},${quote(c.scene)},${quote(c.focus)},${quote(c.npc)},${quote(c.role)},${quote(JSON.stringify(c.lines))}::jsonb,${quote(c.object)},${quote(c.secret)},${quote(c.skill)},${c.dc})
  on conflict(chapter_id) do update set scene=excluded.scene,focus=excluded.focus,npc=excluded.npc,role=excluded.role,lines=excluded.lines,object_name=excluded.object_name,secret=excluded.secret,skill=excluded.skill,dc=excluded.dc;`).join('\n');
-sql=sql.replace('create or replace function public.party_deep',seeds+'\ncreate or replace function public.party_deep');
+const aftermathSeeds=battleAftermath.map(a=>`insert into public.campaign_aftermath(chapter_id,object_name,narration,clue,item_name,xp)
+ values(${a.chapter},${quote(a.object)},${quote(a.text)},${quote(a.clue)},${quote(a.item)},${a.xp})
+ on conflict(chapter_id) do update set object_name=excluded.object_name,narration=excluded.narration,clue=excluded.clue,item_name=excluded.item_name,xp=excluded.xp;`).join('\n');
+sql=sql.replace('create or replace function public.party_deep',seeds+'\n'+aftermathSeeds+'\ncreate or replace function public.party_deep');
+const partyDeep=sql.slice(sql.indexOf('create or replace function public.party_deep'),sql.indexOf('-- Only new encounters'));
+fs.writeFileSync('db/013_v30_battle_aftermath.sql','-- v3.0 postbattle content for deployments that already ran 012.\n'+aftermathSchema+'\n'+aftermathSeeds+'\n'+partyDeep);
 sql+=`
 insert into public.campaign_items(name,merchant,unlock_chapter,slot,price,attack,damage,ac,rarity,description,effect)
 values
