@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {areas,areaNpcs,areaQuests,areaBattles,wondersGoods} from '../src/areas.js';
 const db=new PGlite();
 await db.exec("create role anon;create role authenticated;create schema auth;create function auth.uid() returns uuid language sql as $$ select current_setting('app.uid',true)::uuid $$;create publication supabase_realtime;create function gen_random_bytes(int) returns bytea language sql as $$ select decode(substr(md5(random()::text),1,$1*2),'hex') $$;");
-for(const file of ['supabase.sql','upgrade.sql','db/002_secure_campaign.sql','db/003_encounters.sql','db/004_campaign_battles.sql','db/005_classes_spells.sql','db/006_deeper_campaign.sql','db/007_upper_city_areas.sql','db/008_v21_combat_story.sql','db/009_v21_dialogue_polish.sql'])await db.exec(fs.readFileSync(file,'utf8').replace('create extension if not exists pgcrypto;',''));
+for(const file of ['supabase.sql','upgrade.sql','db/002_secure_campaign.sql','db/003_encounters.sql','db/004_campaign_battles.sql','db/005_classes_spells.sql','db/006_deeper_campaign.sql','db/007_upper_city_areas.sql','db/008_v21_combat_story.sql','db/009_v21_dialogue_polish.sql','db/011_xp_progression.sql'])await db.exec(fs.readFileSync(file,'utf8').replace('create extension if not exists pgcrypto;',''));
 const ids=['00000000-0000-0000-0000-000000000021','00000000-0000-0000-0000-000000000022'];
 let code;
 async function uid(i){await db.query('select set_config($1,$2,false)',['app.uid',ids[i]])}
@@ -45,6 +45,7 @@ for(const id of ['star','medicine','gate','ledger','signal']){
  s=await area(0,'area_quest',{area:q.stages.at(-1).area,quest:q.id});
  assert.equal(s.state.side_quests[id].status,'已完成');assert.equal(s.players.find(p=>p.name==='Aster').gold,gold+q.reward.gold);assert.equal(s.players.find(p=>p.name==='Aster').experience,xp+q.reward.xp);
  assert(s.players.find(p=>p.name==='Aster').inventory.includes(q.reward.item));
+ if(id==='medicine')assert(s.players.find(p=>p.name==='Aster').level>7,'completed side quests grant real XP levels');
  await deny(()=>area(0,'area_quest',{area:q.area,quest:q.id}),'QUEST_COMPLETE');
  console.log('QUEST PASS',id);
 }
