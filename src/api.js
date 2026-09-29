@@ -3,10 +3,12 @@ const url=import.meta.env.VITE_SUPABASE_URL;
 const key=import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const configured=Boolean(url&&key);
 export const client=configured?createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true}}):null;
+let presenceToken='';
 export async function ensureIdentity(){
  if(!client)throw Error('网站尚未配置公开的 Supabase 连接信息。');
  const {data:{session},error}=await client.auth.getSession(); if(error)throw error;
- if(!session){const result=await client.auth.signInAnonymously();if(result.error)throw result.error;}
+ if(!session){const result=await client.auth.signInAnonymously();if(result.error)throw result.error;presenceToken=result.data.session?.access_token||'';}
+ else presenceToken=session.access_token;
 }
 export async function command(code,action,payload={}){
  await ensureIdentity(); const {data,error}=await client.rpc('party_command',{p_code:code||'',p_action:action,p_payload:payload});
@@ -35,6 +37,14 @@ export async function areaCommand(code,action,payload={}){await ensureIdentity()
 export async function saveSlot(action,slot=null,room=null,name=null,cls=null){
  await ensureIdentity();const {data,error}=await client.rpc('party_save_slot',{p_action:action,p_slot:slot,p_room:room,p_name:name,p_class:cls});
  if(error)throw error;return data;
+}
+export async function listSlots(){await ensureIdentity();const {data,error}=await client.rpc('party_v31_slots');if(error)throw error;return data;}
+export async function enterSlot(slot){await ensureIdentity();const {data,error}=await client.rpc('party_enter_slot',{p_slot:slot});if(error)throw error;return data;}
+export async function deleteSlot(slot){await ensureIdentity();const {data,error}=await client.rpc('party_delete_slot',{p_slot:slot});if(error)throw error;return data;}
+export async function continueExploring(code){await ensureIdentity();const {data,error}=await client.rpc('party_v31_explore',{p_code:code});if(error)throw error;return data;}
+export function signalDeparture(code){
+ if(!client||!code||!presenceToken)return;
+ fetch(`${url}/rest/v1/rpc/party_command`,{method:'POST',keepalive:true,headers:{'Content-Type':'application/json',apikey:key,Authorization:`Bearer ${presenceToken}`},body:JSON.stringify({p_code:code,p_action:'leave',p_payload:{}})}).catch(()=>{});
 }
 export async function enterRegion(code,area){await ensureIdentity();const {data,error}=await client.rpc('party_region',{p_code:code,p_area:area});if(error)throw error;return data;}
 export async function deepCommand(code,action,payload={}){await ensureIdentity();const {data,error}=await client.rpc('party_deep',{p_code:code,p_action:action,p_payload:payload});if(error)throw error;return data;}
