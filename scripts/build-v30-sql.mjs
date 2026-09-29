@@ -19,6 +19,8 @@ fs.writeFileSync('db/014_v30_followup_dialogue.sql',
  '-- v3.0 chapter-specific playable follow-up dialogue for existing saves.\n'
  +"alter table public.campaign_deep_chapters add column if not exists followups jsonb not null default '[]'::jsonb;\n"
  +followSeeds+'\n'+partyDeep);
+fs.writeFileSync('db/015_v30_encounter_routes.sql',
+ '-- Let the deep-well bypass actually resolve its encounter; keep the council battle mandatory.\n'+partyDeep);
 sql+=`
 insert into public.campaign_items(name,merchant,unlock_chapter,slot,price,attack,damage,ac,rarity,description,effect)
 values

@@ -153,6 +153,7 @@ begin
      -case when coalesce(v_deep#>>array['explorationFlags',v_key||'_secret'],'false')='true' then 3 else 0 end));
    v_deep:=jsonb_set(v_deep,array['route',v_key],to_jsonb(case when v_idx=1 then 'force' when v_success then 'peace' else 'failed' end),true);
    v_log:=case when v_idx=1 then '队伍决定正面交锋；线索与证人仍可留给后续章节。'
+    when v_success and v_key::integer=28 then 'D20='||v_roll||'+'||v_bonus||'：交涉揭穿佣兵雇主；对方仍执意焚毁证据，决战无法避免。'
     when v_success then 'D20='||v_roll||'+'||v_bonus||'：以证据与交涉解决了冲突。'
     else 'D20='||v_roll||'+'||v_bonus||'：对方未接受条件；仍可通过现有路线继续。' end;
    if v_idx=2 and v_success then
@@ -168,10 +169,20 @@ begin
    end if;
    if v_success and v_combat is not null and v_combat<>'null'::jsonb
       and coalesce((v_combat->>'hp')::integer,0)>0 and coalesce((v_combat->>'round')::integer,0)=1
-      and v_key::integer not in (17,28) and not (v_combat ? 'side_quest') then
+      and v_key::integer<>28 and not (v_combat ? 'side_quest') then
      v_deep:=jsonb_set(v_deep,array['combat',v_key],jsonb_build_object('combat_required',false,'combat_resolved',true,'combat_skipped',true),true);
      v_state:=jsonb_set(v_state,'{combat}','null'::jsonb);
      v_log:=v_log||' 本场守备遭遇已通过非战斗方式解决，不会重新触发。';
+   elsif v_success and v_key::integer=28 and v_combat is not null and v_combat<>'null'::jsonb
+      and coalesce((v_combat->>'hp')::integer,0)>0 then
+     v_enemies:=v_combat->'enemies';
+     for v_slot in 0..jsonb_array_length(v_enemies)-1 loop
+       v_foe:=v_enemies->v_slot;
+       v_enemies:=jsonb_set(v_enemies,array[v_slot::text,'attack_bonus'],to_jsonb(greatest(0,(v_foe->>'attack_bonus')::integer-1)));
+     end loop;
+     v_combat:=jsonb_set(v_combat,'{enemies}',v_enemies);
+     v_state:=jsonb_set(v_state,'{combat}',v_combat);
+     v_log:=v_log||' 揭露雇主使敌方攻击 -1。';
    end if;
    if v_idx=1 then v_deep:=jsonb_set(v_deep,array['storyFlags',v_key||'_force'],'true'::jsonb,true); end if;
  elsif p_action='environment' then
