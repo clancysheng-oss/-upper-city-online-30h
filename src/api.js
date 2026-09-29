@@ -30,3 +30,5 @@ export function subscribe(code,onChange){
  timer=setInterval(onChange,12000);
  return ()=>{clearInterval(timer);client.removeChannel(channel)};
 }
+
+export async function areaCommand(code,action,payload={}){await ensureIdentity();const {data,error}=await client.rpc('party_area',{p_code:code,p_action:action,p_payload:payload});if(error)throw error;return data;}
