@@ -47,12 +47,12 @@ export const dialogues = chapters.map((chapter, i) => {
         options: [
           {
             label: `追问：${lead[0]}`,
-            reply: `${lead[1]} ${lead[4]}`,
+            reply: lead[1],
             flag: `voice_${i}_inquiry`,
           },
           {
             label: `问起：${follow[0]}`,
-            reply: `${follow[1]} ${follow[4]}`,
+            reply: follow[1],
             flag: `voice_${i}_trust`,
           },
         ],
@@ -62,12 +62,12 @@ export const dialogues = chapters.map((chapter, i) => {
         options: [
           {
             label: `核实「${lead[6]}」的来历`,
-            reply: `${lead[5]} ${lead[4]}`,
+            reply: `${lead[4]} ${lead[5]}`,
             flag: `approach_${i}_aid`,
           },
           {
             label: `先保护「${follow[6]}」的证人`,
-            reply: `${follow[5]} ${follow[4]}`,
+            reply: `${follow[4]} ${follow[5]}`,
             flag: `approach_${i}_caution`,
           },
         ],
@@ -77,12 +77,12 @@ export const dialogues = chapters.map((chapter, i) => {
         options: [
           {
             label: `争取${name}支持「${chapter.choices[0].label}」`,
-            reply: `“${lead[4]}”${name}决定留下，帮助核验${lead[6]}。`,
+            reply: `${name}留下核验「${lead[6]}」，并替队伍守住现场。证据成立后，你们可以选择${chapter.choices[0].label}。`,
             flag: `support_${i}_stay`,
           },
           {
             label: `请${name}协助「${chapter.choices[1].label}」`,
-            reply: `“${follow[4]}”${name}带走${follow[6]}的线索，约定安全地点再见。`,
+            reply: `${name}带走「${follow[6]}」的证人，约定在你们选择${chapter.choices[1].label}时带人回来。`,
             flag: `support_${i}_protect`,
           },
         ],

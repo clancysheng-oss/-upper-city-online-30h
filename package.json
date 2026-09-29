@@ -12,7 +12,7 @@
     "powers:sql": "node scripts/build-powers-sql.mjs",
     "deeper:sql": "node scripts/build-deeper-sql.mjs",
     "areas:sql": "node scripts/build-areas-sql.mjs",
-    "v21:sql": "node scripts/build-v21-sql.mjs"
+    "v21:sql": "node scripts/build-v21-sql.mjs && node scripts/build-v21-dialogue-polish.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0"
