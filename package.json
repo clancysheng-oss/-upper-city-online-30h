@@ -1,17 +1,18 @@
 {
   "name": "upper-city-online-30h",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "test": "node tests/db-flow.mjs && node tests/area-flow.mjs && node tests/ui-flow.mjs",
+    "test": "node tests/db-flow.mjs && node tests/area-flow.mjs && node tests/combat-v21.mjs && node tests/ui-flow.mjs",
     "campaign:sql": "node scripts/build-encounters-sql.mjs",
     "battles:sql": "node scripts/build-battles-sql.mjs",
     "powers:sql": "node scripts/build-powers-sql.mjs",
     "deeper:sql": "node scripts/build-deeper-sql.mjs",
-    "areas:sql": "node scripts/build-areas-sql.mjs"
+    "areas:sql": "node scripts/build-areas-sql.mjs",
+    "v21:sql": "node scripts/build-v21-sql.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0"

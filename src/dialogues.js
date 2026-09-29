@@ -1,6 +1,7 @@
 // Original dialogue scenes. Three server-owned conversations precede each chapter's investigations.
 import { chapters } from "./campaign.js";
 import { encounters } from "./encounters.js";
+import { storyVoices } from './story-voices.js';
 const cast = [
   ["守门人哈罗", "守住城门的老兵"],
   ["寄存铺掌柜艾尔", "保管铜匣的人"],
@@ -35,53 +36,53 @@ const cast = [
 ];
 export const dialogues = chapters.map((chapter, i) => {
   const [name, role] = cast[i],
-    [lead, follow] = encounters[i];
+    [lead, follow] = encounters[i], [opening, stakes, decision] = storyVoices[i];
   return {
     chapter: i,
     name,
     role,
     beats: [
       {
-        text: `${chapter.text} ${name}在现场等你们，想先弄清你们为何介入。`,
+        text: opening,
         options: [
           {
-            label: `向${name}询问：${lead[0]}`,
-            reply: `${name}低声说：“${lead[1]}”你们知道该从哪里着手。`,
+            label: `追问：${lead[0]}`,
+            reply: `${lead[1]} ${lead[4]}`,
             flag: `voice_${i}_inquiry`,
           },
           {
-            label: `先听${name}讲述自己的处境`,
-            reply: `${name}说：“${follow[1]}”这份信任会影响后面的交涉。`,
+            label: `问起：${follow[0]}`,
+            reply: `${follow[1]} ${follow[4]}`,
             flag: `voice_${i}_trust`,
           },
         ],
       },
       {
-        text: `${name}把局面说得更清楚：“${follow[1]}”现在你们得决定先以什么态度接近这场风波。`,
+        text: stakes,
         options: [
           {
-            label: `承诺协助，再调查「${lead[0]}」`,
-            reply: `${name}接受承诺，指向${lead[0]}的关键位置。你们可以开始探索。`,
+            label: `核实「${lead[6]}」的来历`,
+            reply: `${lead[5]} ${lead[4]}`,
             flag: `approach_${i}_aid`,
           },
           {
-            label: `保留判断，先调查「${follow[0]}」`,
-            reply: `${name}尊重你们的谨慎，交代${follow[0]}的来龙去脉。`,
+            label: `先保护「${follow[6]}」的证人`,
+            reply: `${follow[5]} ${follow[4]}`,
             flag: `approach_${i}_caution`,
           },
         ],
       },
       {
-        text: `${name}摊开地图：“${chapter.choices[0].label}和${chapter.choices[1].label}会通向不同的后果。先查清${lead[0]}与${follow[0]}，再决定。”`,
+        text: decision,
         options: [
           {
-            label: `请${name}继续留在现场协助`,
-            reply: `${name}答应留守，并将${lead[0]}的细节记入队伍记录。`,
+            label: `争取${name}支持「${chapter.choices[0].label}」`,
+            reply: `“${lead[4]}”${name}决定留下，帮助核验${lead[6]}。`,
             flag: `support_${i}_stay`,
           },
           {
-            label: `请${name}先去照看可能受牵连的人`,
-            reply: `${name}离开前交代了${follow[0]}的隐蔽路径，承诺在安全处接应。`,
+            label: `请${name}协助「${chapter.choices[1].label}」`,
+            reply: `“${follow[4]}”${name}带走${follow[6]}的线索，约定安全地点再见。`,
             flag: `support_${i}_protect`,
           },
         ],
