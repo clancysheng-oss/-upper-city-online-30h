@@ -53,7 +53,7 @@ begin
  if not found then raise exception 'NOT_MEMBER'; end if;
  select state into v_state from public.game_states where room_code=v_code for update;
  if not coalesce((v_state->>'started')::boolean,false) then raise exception 'NOT_STARTED'; end if;
- v_deep:='{"talk":{},"inspected":{},"storyFlags":{},"companionApproval":{},"route":{},"explorationFlags":{},"combat":{},"aftermath":{}}'::jsonb||coalesce(v_state->'deep','{}'::jsonb);
+ v_deep:='{"talk":{},"inspected":{},"storyFlags":{},"companionApproval":{},"route":{},"explorationFlags":{},"combat":{},"aftermath":{},"followup":{},"debrief":{}}'::jsonb||coalesce(v_state->'deep','{}'::jsonb);
  v_key:=coalesce(v_state->>'chapter','0');
  select * into v_data from public.campaign_deep_chapters where chapter_id=v_key::integer;
  if not found then raise exception 'CHAPTER_UNAVAILABLE'; end if;
@@ -77,6 +77,16 @@ begin
      v_log:=v_log||case v_idx when 0 then '；'||v_comp.name||'赞同你倾听证人（态度 +5）'
        when 2 then '；'||v_comp.name||'反对威胁证人（态度 -10）' else '' end;
    end if;
+ elsif p_action in ('followup','debrief') then
+   v_idx:=coalesce((p_payload->>'choice')::integer,-1);
+   if v_idx not between 0 and 2 then raise exception 'INVALID_CHOICE'; end if;
+   if p_action='followup' and not (coalesce(v_deep->'talk'->v_key,'[]'::jsonb) ? v_idx::text) then raise exception 'ASK_WITNESS_FIRST'; end if;
+   if p_action='debrief' and coalesce(v_deep#>>array['inspected',v_key],'false')<>'true' then raise exception 'INSPECT_FIRST'; end if;
+   v_done:=coalesce(v_deep->p_action->v_key,'[]'::jsonb);
+   if v_done ? v_idx::text then raise exception 'ALREADY_DISCUSSSED'; end if;
+   v_done:=v_done||to_jsonb(v_idx::text);
+   v_deep:=jsonb_set(v_deep,array[p_action,v_key],v_done,true);
+   v_log:=v_data.npc||'：'||(v_data.followups->>(v_idx+case when p_action='debrief' then 3 else 0 end));
  elsif p_action='inspect' then
    if coalesce(v_deep#>>array['inspected',v_key],'false')='true' then raise exception 'ALREADY_EXPLORED'; end if;
    v_idx:=case v_data.skill when '运动' then 0 when '潜行' then 1 when '调查' then 3 when '奥秘' then 3 when '洞悉' then 4 when '察觉' then 4 when '求生' then 4 else 5 end;

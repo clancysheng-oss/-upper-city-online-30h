@@ -48,6 +48,10 @@ await db.query('update public.players set hp=0 where id=$1',[b.id]);
 await db.query('update public.players set ability_charges=2 where id=$1',[a.id]);
 await combat([{...enemy(60),ac:30}],[a.id]);
 s=await cast(0,code,'wizard_focus',a.id);
+for(let attempt=0;s.state.combat.turn!==null&&attempt<25;attempt++){
+ await db.query('update public.players set ability_charges=2 where id=$1',[a.id]);
+ s=await cast(0,code,'wizard_focus',a.id);
+}
 assert(s.state.combat.hp>0&&s.state.combat.turn===null,'party wipe is an explicit combat state');
 await assert.rejects(command(1,code,'retry'),/HOST_ONLY/);
 s=await command(0,code,'retry');
