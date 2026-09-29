@@ -261,7 +261,7 @@ declare v_uid uuid:=auth.uid(); v_code text; v_data jsonb; v_record public.save_
 begin
  if v_uid is null then raise exception 'AUTH_REQUIRED'; end if;
  if p_action='list' then
-  return coalesce((select jsonb_agg(jsonb_build_object('slot',s.slot,'room',s.room_code,'saved_at',s.saved_at,'play_seconds',s.play_seconds,'chapter',coalesce((g.state->>'chapter')::int,0),'area',coalesce(g.state->>'current_area','上城区'),'name',p.name,'class_name',p.class_name,'level',p.level) order by s.slot)
+  return coalesce((select jsonb_agg(jsonb_build_object('slot',s.slot,'room',s.room_code,'saved_at',s.saved_at,'play_seconds',s.play_seconds,'chapter',coalesce((g.state->>'chapter')::int,0),'area',coalesce((select a.name from public.uc_areas a where a.id=g.state->>'current_area'),'上城区'),'name',p.name,'class_name',p.class_name,'level',p.level) order by s.slot)
    from public.save_slots s join public.game_states g on g.room_code=s.room_code join public.players p on p.room_code=s.room_code and p.user_id=v_uid where s.owner_id=v_uid and p.is_companion=false),'[]'::jsonb);
  end if;
  if p_slot not between 1 and 3 then raise exception 'INVALID_SLOT'; end if;

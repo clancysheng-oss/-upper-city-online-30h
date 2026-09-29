@@ -24,7 +24,7 @@ await cmd(1,one.room,'roll',{skill:'调查',dc:15});
 await assert.rejects(slot(1,'save',1),/EMPTY_SLOT/);
 await assert.rejects(cmd(1,one.room,'claim_host'),/SAVE_OWNER_ONLY/);
 await slot(0,'save',1);
-let details=await slot(0,'list');assert(details[0].saved_at&&details[0].room===one.room&&details[0].area==='kegs');
+let details=await slot(0,'list');assert(details[0].saved_at&&details[0].room===one.room&&details[0].area==='三只旧酒桶');
 let raw=(await db.query('select saved_state,saved_players from public.save_slots where owner_id=$1 and slot=1',[users[0]])).rows[0];assert.equal(raw.saved_state.current_area,'kegs');assert.equal(raw.saved_players.length,2);
 await cmd(0,one.room,'leave');s=await slot(0,'enter',1);assert.equal(s.players.find(p=>p.id===one.me).name,'璃亚');
 assert.equal(s.state.current_area,'kegs');assert.equal(s.messages.some(m=>m.kind==='roll'),true);
