@@ -37,3 +37,4 @@ export async function saveSlot(action,slot=null,room=null,name=null,cls=null){
  if(error)throw error;return data;
 }
 export async function enterRegion(code,area){await ensureIdentity();const {data,error}=await client.rpc('party_region',{p_code:code,p_area:area});if(error)throw error;return data;}
+export async function deepCommand(code,action,payload={}){await ensureIdentity();const {data,error}=await client.rpc('party_deep',{p_code:code,p_action:action,p_payload:payload});if(error)throw error;return data;}

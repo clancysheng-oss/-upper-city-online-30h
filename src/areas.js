@@ -101,7 +101,9 @@ export const wondersGoods = [
  {name:'夜巡长弓',slot:'weapon',price:70,attack:2,damage:5,ac:0,unlock:10,rarity:'稀有',description:'伊莉娅设计的弓，攻击 +2，伤害 +5。'},
  {name:'审计官胸针',slot:'offhand',price:65,attack:0,damage:0,ac:2,unlock:10,rarity:'稀有',description:'经过符文加固的徽章，AC +2。'},
  {name:'军令破咒卷轴',slot:'consumable',price:52,attack:0,damage:0,ac:0,unlock:10,rarity:'稀有',description:'战斗中以法术攻击造成 20–26 伤害。',effect:'damage20'},
+ {name:'奥术回响法杖',slot:'weapon',price:92,attack:2,damage:3,ac:0,unlock:10,rarity:'稀有',description:'法师：法术命中 +2、伤害 +3；每场首个命中攻击法术额外 6 奥术伤害。'},
  {name:'信号手戒指',slot:'offhand',price:90,attack:2,damage:0,ac:1,unlock:15,rarity:'稀有',description:'校准过的传讯戒，攻击 +2，AC +1。'},
+ {name:'星穹织法长袍',slot:'armor',price:138,attack:0,damage:0,ac:2,unlock:20,rarity:'稀有',description:'法师：AC +2，攻击法术伤害 +2。'},
  {name:'拱顶秘银剑',slot:'weapon',price:145,attack:4,damage:7,ac:0,unlock:20,rarity:'史诗',description:'稀少的秘银之刃，攻击 +4，伤害 +7。'},
  {name:'奇迹高堂守护甲',slot:'armor',price:170,attack:0,damage:0,ac:4,unlock:25,rarity:'史诗',description:'限量符文重甲，AC +4。'}
 ];
