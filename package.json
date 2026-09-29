@@ -1,12 +1,12 @@
 {
   "name": "upper-city-online-30h",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "test": "node tests/db-flow.mjs && node tests/area-flow.mjs && node tests/combat-v21.mjs && node tests/ui-flow.mjs && node tests/save-v22.mjs",
+    "test": "node tests/db-flow.mjs && node tests/area-flow.mjs && node tests/combat-v21.mjs && node tests/ui-flow.mjs && node tests/save-v22.mjs && node tests/xp-flow.mjs",
     "campaign:sql": "node scripts/build-encounters-sql.mjs",
     "battles:sql": "node scripts/build-battles-sql.mjs",
     "powers:sql": "node scripts/build-powers-sql.mjs",

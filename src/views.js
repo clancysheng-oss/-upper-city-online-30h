@@ -6,6 +6,7 @@ import { battleByChapter } from "./battles.js";
 import { powers, spellcasters } from "./powers.js";
 import { wondersGoods, companionProfile } from "./areas.js";
 import { mapView, areaView, questJournal, sideBattleArt } from "./areas-view.js";
+import {experienceProgress} from './progression.js';
 export const esc = (s) =>
   String(s ?? "").replace(
     /[&<>"']/g,
@@ -17,7 +18,7 @@ export const esc = (s) =>
 export const button = (label, action, disabled = false, extra = "") =>
   `<button data-act="${action}" ${extra} ${disabled ? "disabled" : ""}>${label}</button>`;
 export function character(p) {
-  return `<strong>${p.is_companion ? "🤝 伙伴 · " : ""}${esc(p.name)} · ${esc(p.class_name)} · ${p.level || 1} 级</strong><p>HP ${p.hp}/${p.max_hp} · AC ${p.ac} · ${p.gold} 金币 · ${p.experience||0} XP</p><div class="stats">${["力量", "敏捷", "体质", "智力", "感知", "魅力"].map((s, i) => `<span>${s} ${p.stats[i]}</span>`).join("")}</div><p>装备：${esc(p.equipment.join("、"))}<br>背包：${esc(p.inventory.join("、") || "空")}</p>${p.hp === 0 ? `<p class="error">倒地 · 死亡豁免成功 ${p.death_successes}/3，失败 ${p.death_failures}/3 ${p.death_failures >= 3 ? "· 死亡" : ""}</p>` : ""}`;
+  return `<strong>${p.is_companion ? "🤝 伙伴 · " : ""}${esc(p.name)} · ${esc(p.class_name)} · ${p.level || 1} 级</strong><p>HP ${p.hp}/${p.max_hp} · AC ${p.ac} · ${p.gold} 金币 · ${p.experience||0} XP<br><small>${experienceProgress(p.level||1,p.experience||0)}</small></p><div class="stats">${["力量", "敏捷", "体质", "智力", "感知", "魅力"].map((s, i) => `<span>${s} ${p.stats[i]}</span>`).join("")}</div><p>装备：${esc(p.equipment.join("、"))}<br>背包：${esc(p.inventory.join("、") || "空")}</p>${p.hp === 0 ? `<p class="error">倒地 · 死亡豁免成功 ${p.death_successes}/3，失败 ${p.death_failures}/3 ${p.death_failures >= 3 ? "· 死亡" : ""}</p>` : ""}`;
 }
 function dialogueView(s) {
   const scene = dialogues[s.chapter],

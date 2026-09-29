@@ -1,0 +1,27 @@
+import {PGlite} from '@electric-sql/pglite';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {experienceProgress,bonusThresholds} from '../src/progression.js';
+const db=new PGlite();
+await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql as $$ select current_setting('app.uid',true)::uuid $$;create publication supabase_realtime;create function gen_random_bytes(int) returns bytea language sql as $$ select decode(substr(md5(random()::text),1,$1*2),'hex') $$;");
+for(const file of ['supabase.sql','upgrade.sql','db/002_secure_campaign.sql','db/003_encounters.sql','db/004_campaign_battles.sql','db/005_classes_spells.sql','db/006_deeper_campaign.sql','db/007_upper_city_areas.sql','db/008_v21_combat_story.sql','db/009_v21_dialogue_polish.sql','db/010_v22_save_slots.sql','db/011_xp_progression.sql'])await db.exec(fs.readFileSync(file,'utf8').replace('create extension if not exists pgcrypto;',''));
+const user='00000000-0000-0000-0000-000000000081';await db.query('insert into auth.users(id) values($1)',[user]);await db.query("select set_config('app.uid',$1,false)",[user]);
+const s=(await db.query("select public.party_save_slot('create',1,null,'经验测试','法师') v")).rows[0].v;const code=s.room;
+async function player(){return (await db.query('select * from public.players where room_code=$1 and user_id=$2',[code,user])).rows[0]}
+assert.deepEqual(bonusThresholds,[50,150,300]);
+for(const [xp,bonus] of [[0,0],[49,0],[50,1],[55,1],[100,1],[149,1],[150,2],[300,3]])assert.equal((await db.query('select public.campaign_xp_bonus($1) v',[xp])).rows[0].v,bonus);
+assert(experienceProgress(1,30).includes('20 XP'));
+await db.query('update public.players set experience=experience+55 where room_code=$1',[code]);
+let p=await player();assert.equal(p.level,2);assert.equal(p.experience,55);assert.equal(p.max_hp,12);
+await db.query('update public.players set experience=experience+20 where room_code=$1',[code]);
+p=await player();assert.equal(p.level,2);assert.equal(p.max_hp,12);assert.equal(p.hp,12);assert.deepEqual(p.spell_slots,[0,2,0,0,0,0,0]);
+await db.query('update public.players set hp=0 where room_code=$1',[code]);
+await db.query('update public.players set experience=150 where room_code=$1',[code]);p=await player();assert.equal(p.level,3);assert.equal(p.hp,0,'level-up does not revive downed characters');assert.equal(p.max_hp,16);assert(p.spell_slots[2]>0);
+await db.query("update public.game_states set state=jsonb_set(state,'{chapter}','10'::jsonb) where room_code=$1",[code]);p=await player();assert.equal(p.level,7,'chapter milestone stacks with two XP bonus levels');assert.equal(p.hp,0);
+await db.query('update public.players set hp=max_hp,experience=300 where room_code=$1',[code]);p=await player();assert.equal(p.level,8);assert.equal(p.hp,p.max_hp);
+const snapshot=(await db.query('select public.party_snapshot($1) v',[code])).rows[0].v;assert.equal(snapshot.players[0].level,8);assert.equal(snapshot.players[0].experience,300);
+await db.query("select public.party_save_slot('save',1)");const checkpoint=(await db.query('select saved_players from public.save_slots where room_code=$1',[code])).rows[0].saved_players;assert.equal(checkpoint[0].level,8);
+await db.query('update public.players set level=8,max_hp=60,hp=0,experience=0,xp_tier_applied=0 where room_code=$1',[code]);
+await db.query('update public.players set experience=100 where room_code=$1',[code]);p=await player();assert.equal(p.level,9,'XP advances a character already above the story minimum');assert.equal(p.hp,0);assert.equal(p.xp_tier_applied,1);
+await db.query('update public.players set experience=experience where room_code=$1',[code]);assert.equal((await player()).level,9,'reapplying the same XP cannot farm levels');
+console.log('XP FLOW PASS: rewards trigger levels, HP/spells, chapter stacking, downed state, snapshot and save');
