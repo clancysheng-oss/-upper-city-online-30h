@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {deepChapters} from '../src/deep-story.js';
 const db=new PGlite();
 await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql as $$ select current_setting('app.uid',true)::uuid $$;create publication supabase_realtime;create function gen_random_bytes(int) returns bytea language sql as $$ select decode(substr(md5(random()::text),1,$1*2),'hex') $$;");
-for(const f of ['supabase.sql','upgrade.sql','db/002_secure_campaign.sql','db/003_encounters.sql','db/004_campaign_battles.sql','db/005_classes_spells.sql','db/006_deeper_campaign.sql','db/007_upper_city_areas.sql','db/008_v21_combat_story.sql','db/009_v21_dialogue_polish.sql','db/010_v22_save_slots.sql','db/011_xp_progression.sql','db/012_v30_story_depth.sql'])await db.exec(fs.readFileSync(f,'utf8').replace('create extension if not exists pgcrypto;',''));
+for(const f of ['supabase.sql','upgrade.sql','db/002_secure_campaign.sql','db/003_encounters.sql','db/004_campaign_battles.sql','db/005_classes_spells.sql','db/006_deeper_campaign.sql','db/007_upper_city_areas.sql','db/008_v21_combat_story.sql','db/009_v21_dialogue_polish.sql','db/010_v22_save_slots.sql','db/011_xp_progression.sql','db/012_v30_story_depth.sql','db/013_v30_battle_aftermath.sql'])await db.exec(fs.readFileSync(f,'utf8').replace('create extension if not exists pgcrypto;',''));
 const a='00000000-0000-0000-0000-000000000091',b='00000000-0000-0000-0000-000000000092';
 await db.query('insert into auth.users(id) values($1),($2)',[a,b]);
 async function as(uid,sql,args=[]){await db.query("select set_config('app.uid',$1,false)",[uid]);return (await db.query(sql,args)).rows[0]?.v}
@@ -15,7 +15,7 @@ await as(b,"select public.party_command($1,'ready') v",[code]);
 await as(a,"select public.party_command($1,'start') v",[code]);
 let state=await as(a,"select public.party_snapshot($1) v",[code]);
 assert.equal(state.players.length,2);
-let fights=0,skipped=0,environmentHits=0;
+let fights=0,skipped=0,environmentHits=0,aftermaths=0;
 async function cmd(uid,action,payload={}){return as(uid,'select public.party_command($1,$2,$3::jsonb) v',[code,action,JSON.stringify(payload)])}
 async function deep(uid,action,payload={}){return as(uid,'select public.party_deep($1,$2,$3::jsonb) v',[code,action,JSON.stringify(payload)])}
 async function battle(snapshot){
@@ -52,7 +52,13 @@ for(let chapter=0;chapter<30;chapter++){
  state=await deep(a,'route',{choice:chapter===1?1:0});
  if(state.state.deep.combat?.[chapter]?.combat_skipped)skipped++;
  if(chapter===17||chapter===28)assert(state.state.combat?.hp>0,'boss remains mandatory');
- if(state.state.combat?.hp>0){fights++;state=await battle(state);}
+ if(state.state.combat?.hp>0){
+  fights++;state=await battle(state);
+  state=await deep(a,'aftermath');
+  aftermaths++;
+  assert(state.state.deep.aftermath[chapter]);
+  await assert.rejects(()=>deep(a,'aftermath'),/ALREADY_COLLECTED/);
+ }
  for(let i=0;i<3;i++)state=await cmd(i%2?a:b,'dialogue',{choice:0});
  for(let i=0;i<2;i++)state=await cmd(i%2?b:a,'explore',{index:i});
  state=await cmd(a,'choice',{index:0});
@@ -63,7 +69,7 @@ assert(state.state.ending);
 assert.equal(state.state.completed_quests.length,29);
 assert(state.state.deep.storyFlags['0_witness_0']);
 assert(state.state.deep.storyFlags['1_force']);
-assert(fights>=2 && skipped>=1 && environmentHits>=2);
+assert(fights>=2 && skipped>=1 && environmentHits>=2 && aftermaths===fights);
 await as(a,"select public.party_save_slot('save',1) v");
 const saved=(await db.query('select saved_state from public.save_slots where room_code=$1',[code])).rows[0].saved_state;
 assert.deepEqual(saved.deep,state.state.deep);
@@ -110,4 +116,4 @@ assert(comment.players.some(p=>p.id===companion));
 await db.query("update public.game_states set state=state-'deep' where room_code=$1",[code]);
 const legacy=await deep(a,'talk',{choice:1});
 assert(legacy.state.deep.storyFlags['28_witness_1'],'legacy state without new fields is upgraded on demand');
-console.log(`V3.0 PASS: 30 chapters, ${fights} real battles, ${skipped} skipped encounters, ${environmentHits} environment hits, wizard equipment, companion refusal/interjection, save and second-player reconnect`);
+console.log(`V3.0 PASS: 30 chapters, ${fights} real battles and aftermaths, ${skipped} skipped encounters, ${environmentHits} environment hits, wizard equipment, companion refusal/interjection, save and second-player reconnect`);

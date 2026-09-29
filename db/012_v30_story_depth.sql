@@ -6,6 +6,12 @@ create table if not exists public.campaign_deep_chapters (
 );
 alter table public.campaign_deep_chapters enable row level security;
 revoke all on public.campaign_deep_chapters from public,anon,authenticated;
+create table if not exists public.campaign_aftermath(
+ chapter_id integer primary key references public.campaign_chapters(id),
+ object_name text not null, narration text not null, clue text not null, item_name text not null, xp integer not null
+);
+alter table public.campaign_aftermath enable row level security;
+revoke all on public.campaign_aftermath from public,anon,authenticated;
 
 insert into public.campaign_deep_chapters(chapter_id,scene,focus,npc,role,lines,object_name,secret,skill,dc)
  values(0,'东门马厩','马车停靠处','驿夫贝伦','替夜班换马的驿夫','["那辆车没有驮铃，只有车底压着一口铁箱。","车夫让我照看一匹蹄铁倒钉的马；它根本没经过西边收费桥。","我把草料收据藏在水槽下，因为登记官已经来问过两次。","若哈罗肯说真话，我愿把马留在这里给人核对。"]'::jsonb,'马厩水槽','蹄铁倒钉的痕迹证明马车绕过收费桥','调查',12)
@@ -97,6 +103,36 @@ insert into public.campaign_deep_chapters(chapter_id,scene,focus,npc,role,lines,
 insert into public.campaign_deep_chapters(chapter_id,scene,focus,npc,role,lines,object_name,secret,skill,dc)
  values(29,'黎明街口','城市的新一天','报童弗莱','见证第一份公开判决的报童','["我记得你们雨夜进城时没人敢写第十三辆车。","如今每条街都在读同一份判决，也有人说自己没被听见。","伊莱娅让我把名字都记下来，包括反对你们的人。","明天还会有人争吵，但至少这次他们知道该去哪里说。"]'::jsonb,'新印报纸','报纸背面附有曾被删掉的证人更正声明','洞悉',17)
  on conflict(chapter_id) do update set scene=excluded.scene,focus=excluded.focus,npc=excluded.npc,role=excluded.role,lines=excluded.lines,object_name=excluded.object_name,secret=excluded.secret,skill=excluded.skill,dc=excluded.dc;
+insert into public.campaign_aftermath(chapter_id,object_name,narration,clue,item_name,xp)
+ values(2,'屋脊上折断的弩','诺娅从弩托下抽出一张湿透的会面草图。弩手用红线圈出废塔下方的入口；雇他的人知道灯语指向哪里。','废塔下方的红线入口','雨瓦弩托密图',18)
+ on conflict(chapter_id) do update set object_name=excluded.object_name,narration=excluded.narration,clue=excluded.clue,item_name=excluded.item_name,xp=excluded.xp;
+insert into public.campaign_aftermath(chapter_id,object_name,narration,clue,item_name,xp)
+ values(5,'收账人的铁钩','穆雷辨出钩柄上的工坊号。账本缺页曾被同一家工坊压成金属片，搬运工不必冒险说出姓名也能证明货箱去向。','铁钩上的压片工坊号','灰市压片凭证',20)
+ on conflict(chapter_id) do update set object_name=excluded.object_name,narration=excluded.narration,clue=excluded.clue,item_name=excluded.item_name,xp=excluded.xp;
+insert into public.campaign_aftermath(chapter_id,object_name,narration,clue,item_name,xp)
+ values(8,'假夜巡兵的口令牌','维斯将两枚口令牌叠在一起，缺口完全相同。真正队员的换班记录可以在旧印室找到，逮捕令因此失去依据。','伪口令牌的双重缺口','双缺口口令牌',22)
+ on conflict(chapter_id) do update set object_name=excluded.object_name,narration=excluded.narration,clue=excluded.clue,item_name=excluded.item_name,xp=excluded.xp;
+insert into public.campaign_aftermath(chapter_id,object_name,narration,clue,item_name,xp)
+ values(11,'钟楼机械的停机芯','格雷在停机芯里找到半页古纸。机械并非守着塔，而是替最早的议会保存契约的一部分。纸边还沾着馆藏封蜡。','钟芯里的契约残页','停机芯契约页',26)
+ on conflict(chapter_id) do update set object_name=excluded.object_name,narration=excluded.narration,clue=excluded.clue,item_name=excluded.item_name,xp=excluded.xp;
+insert into public.campaign_aftermath(chapter_id,object_name,narration,clue,item_name,xp)
+ values(14,'猎手留下的烧卷夹','莫罗拨开焦灰，夹层里的签收日期比命令早了三十年。猎手没有看懂自己烧掉的是什么，办公室却早知道那张纸会出现。','烧卷夹里的错位日期','焦痕签收夹',28)
+ on conflict(chapter_id) do update set object_name=excluded.object_name,narration=excluded.narration,clue=excluded.clue,item_name=excluded.item_name,xp=excluded.xp;
+insert into public.campaign_aftermath(chapter_id,object_name,narration,clue,item_name,xp)
+ values(17,'巨兽左侧的甲壳','乌伦剥出带工坊印记的盐晶。巨兽曾是被倒入井中的废液催生，盐晶可让伤兵的证词与高堂出库记录互相印证。','甲壳内的炼金工坊盐晶','盐井异变甲壳',32)
+ on conflict(chapter_id) do update set object_name=excluded.object_name,narration=excluded.narration,clue=excluded.clue,item_name=excluded.item_name,xp=excluded.xp;
+insert into public.campaign_aftermath(chapter_id,object_name,narration,clue,item_name,xp)
+ values(20,'镜厅刺客的鞋跟','菲娅从鞋跟泥里找出军械库碎石，却在刺客衣里发现一张保护证人的旧撤离图。有人同时向双方泄露过路线。','被两方共用的撤离路线','刺客藏匿的撤离图',34)
+ on conflict(chapter_id) do update set object_name=excluded.object_name,narration=excluded.narration,clue=excluded.clue,item_name=excluded.item_name,xp=excluded.xp;
+insert into public.campaign_aftermath(chapter_id,object_name,narration,clue,item_name,xp)
+ values(23,'火场未燃的油瓶','梅瑞救出馆员后才拆开油瓶。瓶塞写着雇佣兵的交货时辰，另一只瓶子则被谁故意留在了馆员宿舍。','雇佣兵的交货时辰','未燃油瓶证物',36)
+ on conflict(chapter_id) do update set object_name=excluded.object_name,narration=excluded.narration,clue=excluded.clue,item_name=excluded.item_name,xp=excluded.xp;
+insert into public.campaign_aftermath(chapter_id,object_name,narration,clue,item_name,xp)
+ values(26,'铁卫盔甲内的军令','凯尔读完盔甲夹层的原令，亲自划去一条伪造的拘捕条款。他让部下为即将到来的公开表决守住侧门。','凯尔划去的伪造拘捕条款','凯尔签认的军令',38)
+ on conflict(chapter_id) do update set object_name=excluded.object_name,narration=excluded.narration,clue=excluded.clue,item_name=excluded.item_name,xp=excluded.xp;
+insert into public.campaign_aftermath(chapter_id,object_name,narration,clue,item_name,xp)
+ values(28,'佣兵首领的契约袋','娜芙确认最后一批平民安全离场。袋里有雇佣兵付款人的名字和一把议事长桌的锁钥，证据得以交给公开记录席。','佣兵付款人与长桌锁钥','议会之战契约袋',45)
+ on conflict(chapter_id) do update set object_name=excluded.object_name,narration=excluded.narration,clue=excluded.clue,item_name=excluded.item_name,xp=excluded.xp;
 create or replace function public.party_deep(p_code text,p_action text,p_payload jsonb default '{}'::jsonb)
 returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
 declare
@@ -104,7 +140,7 @@ declare
  v_state jsonb; v_data public.campaign_deep_chapters%rowtype; v_deep jsonb; v_key text;
  v_done jsonb; v_idx integer; v_roll integer; v_bonus integer; v_dc integer; v_success boolean;
  v_log text; v_combat jsonb; v_foe jsonb; v_enemies jsonb; v_hp integer; v_result jsonb;
- v_comp public.players%rowtype; v_approval integer; v_slot integer;
+ v_comp public.players%rowtype; v_approval integer; v_slot integer; v_aftermath public.campaign_aftermath%rowtype; v_battle jsonb;
 begin
  if auth.uid() is null then raise exception 'AUTH_REQUIRED'; end if;
  perform 1 from public.rooms where code=v_code for update;
@@ -113,7 +149,7 @@ begin
  if not found then raise exception 'NOT_MEMBER'; end if;
  select state into v_state from public.game_states where room_code=v_code for update;
  if not coalesce((v_state->>'started')::boolean,false) then raise exception 'NOT_STARTED'; end if;
- v_deep:='{"talk":{},"inspected":{},"storyFlags":{},"companionApproval":{},"route":{},"explorationFlags":{},"combat":{}}'::jsonb||coalesce(v_state->'deep','{}'::jsonb);
+ v_deep:='{"talk":{},"inspected":{},"storyFlags":{},"companionApproval":{},"route":{},"explorationFlags":{},"combat":{},"aftermath":{}}'::jsonb||coalesce(v_state->'deep','{}'::jsonb);
  v_key:=coalesce(v_state->>'chapter','0');
  select * into v_data from public.campaign_deep_chapters where chapter_id=v_key::integer;
  if not found then raise exception 'CHAPTER_UNAVAILABLE'; end if;
@@ -165,6 +201,18 @@ begin
        v_log:=v_log||'；提前查明阵地，敌方本场 AC -1。';
      end if;
    else v_log:=v_log||'找到可辨认的痕迹，但更深的秘密仍藏在现场。'; end if;
+ elsif p_action='aftermath' then
+   if v_combat is null or v_combat='null'::jsonb or coalesce((v_combat->>'hp')::integer,-1)<>0 then raise exception 'BATTLE_NOT_WON'; end if;
+   if coalesce(v_deep#>>array['aftermath',v_key],'false')='true' then raise exception 'ALREADY_COLLECTED'; end if;
+   select * into v_aftermath from public.campaign_aftermath where chapter_id=v_key::integer;
+   select details into v_battle from public.campaign_battles where chapter_id=v_key::integer;
+   if not found or v_aftermath.chapter_id is null or v_combat->>'name'<>v_battle->>'name'
+     or v_combat ? 'side_quest' then raise exception 'AFTERMATH_UNAVAILABLE'; end if;
+   v_deep:=jsonb_set(v_deep,array['aftermath',v_key],'true'::jsonb,true);
+   v_state:=jsonb_set(v_state,'{clues}',coalesce(v_state->'clues','[]'::jsonb)||to_jsonb(v_aftermath.clue));
+   update public.players set inventory=inventory||to_jsonb(v_aftermath.item_name) where id=v_actor.id;
+   update public.players set experience=experience+v_aftermath.xp where room_code=v_code and user_id is not null;
+   v_log:='战后搜查「'||v_aftermath.object_name||'」：'||v_aftermath.narration||' 队员各获得 '||v_aftermath.xp||' XP；'||v_actor.name||'收下'||v_aftermath.item_name||'。';
  elsif p_action='interject' then
    select * into v_comp from public.players where room_code=v_code and is_companion order by id limit 1;
    if not found or v_key::integer not in (3,5,9,12,16,18,20,23,26,28) then raise exception 'NO_INTERJECTION'; end if;
@@ -271,7 +319,7 @@ declare v_old jsonb; v_new jsonb; v_enemies jsonb; v_foe jsonb; v_ch integer; v_
 begin
  v_old:=old.state->'combat'; v_new:=new.state->'combat';
  new.state:=jsonb_set(new.state,'{deep}',
-   '{"talk":{},"inspected":{},"storyFlags":{},"companionApproval":{},"route":{},"explorationFlags":{},"combat":{}}'::jsonb
+   '{"talk":{},"inspected":{},"storyFlags":{},"companionApproval":{},"route":{},"explorationFlags":{},"combat":{},"aftermath":{}}'::jsonb
      ||coalesce(new.state->'deep','{}'::jsonb));
  if v_old is not null and v_old<>'null'::jsonb and coalesce((v_old->>'hp')::integer,0)>0
     and v_new is not null and v_new<>'null'::jsonb and coalesce((v_new->>'hp')::integer,0)=0 then
