@@ -41,5 +41,7 @@ export async function downloadFinale(data){
  ctx.font='32px Georgia, serif';ctx.fillText(`${mine?.name||'冒险者'} · Lv.${mine?.level||1} · Chapter 30 / 30`,800,820);
  ctx.font='27px Georgia, serif';ctx.fillText((data.state.final_party||data.state.final_victory?.party||data.players.map(p=>p.name)).join(' · ').slice(0,65),800,875);
  ctx.font='25px Georgia, serif';ctx.fillText(s.ending||'Upper City',800,930);
- await new Promise(resolve=>canvas.toBlob(blob=>{if(blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Upper-City-Adventure-Complete.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),30000);}resolve();},'image/png'));
+ const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('纪念图生成失败')),'image/png'));
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Upper-City-Adventure-Complete.png';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),30000);
+ return blob.size;
 }

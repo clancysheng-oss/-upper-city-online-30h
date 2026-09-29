@@ -61,7 +61,7 @@ root.addEventListener('click',async e=>{
  }
  if(action==='finale_next'){const current=finaleStep||(data.state.campaign_complete?'ending':'victory');finaleStep=current==='victory'?'aftermath':current==='ending'?'summary':'the_end';render();return;}
  if(action==='finale_story'){finaleDismissed=true;finaleStep=null;render();return;}
- if(action==='finale_download'){try{await downloadFinale(data);}catch(err){error=err.message;render();}return;}
+ if(action==='finale_download'){try{await downloadFinale(data);notice='纪念图 PNG 已生成';error='';render();}catch(err){error=err.message;notice='';render();}return;}
  if(action==='finale_explore'||action==='finale_menu'){
   if(busy)return;busy=true;
   try{acceptState(await continueExploring(room));if(activeSlot&&data.players.find(p=>p.id===data.me)?.is_host)await saveSlot('save',activeSlot);finaleStep=null;finaleDismissed=true;if(action==='finale_menu')await exitSlot();else render();}
