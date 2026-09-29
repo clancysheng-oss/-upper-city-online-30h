@@ -1,12 +1,19 @@
 import {areas,areaNpcs,areaQuests,areaBattles,wondersGoods} from './areas.js';
 import {esc,button} from './views.js';
+const regionChanges={
+ kegs:['铜灯下的传闻仍像酒一样流动；关于失踪议员的猜测占满了靠窗的桌。','伤兵与搬运工挤在炉边。玛拉把楼上房间留给不敢去大厅作证的人。','桌椅被搬到窗前加固，瑟拉在灶台边替撤离者分发热汤。'],
+ wonders:['工匠们还在争论哪批星盘零件被盗，稀有陈列柜只开放一角。','修复室通宵核对契约和药剂，奈米把急需的卷轴摆在入口。','高堂的库存先供应城防与诊所，罕见的织法装备终于在封存柜上架。'],
+ hall:['书记员低声讨论旧印，听证席尚未开放。','官员争抢证据的署名权，维莎开始要求每份口供都有活着的证人。','旁听席坐满了工人与地下居民，公开的投票比任何命令都更难撤回。'],
+ walls:['巡灯依次亮起，士兵还把暗门的泥印当作寻常雨痕。','受伤的斥候回到墙内，凯文亲自核对每一班的换岗表。','箭袋分给临时守城的居民，瑞奥娜把水轮改成阻止援军闯入的闸。']
+};
+function regionLine(id,state){const phase=state.chapter<10?0:state.chapter<20?1:2;return regionChanges[id]?.[phase]||'';}
 export function mapView(state,selected){
  const questStates=state.side_quests||{};
  return `<section class="card city-map"><div class="step-title"><h2>上城区 · 可探索区域</h2><small>酒馆与高堂常驻；大厅与城墙随主线解锁</small></div>${state.chapter===10?'<p class="good">新区域已解锁：至高大厅</p>':state.chapter===15?'<p class="good">新区域已解锁：上城区城墙</p>':''}<div class="area-grid">${areas.map(a=>{
   const open=state.chapter>=a.unlock;
   const relevant=areaQuests.filter(q=>q.area===a.id||q.stages[questStates[q.id]?.step]?.area===a.id);
   const marker=relevant.some(q=>questStates[q.id]?.status==='可交付'&&q.stages.at(-1).area===a.id)?'✓':relevant.some(q=>questStates[q.id]?.status==='进行中'&&q.stages[questStates[q.id].step]?.area===a.id)?'任务标记':relevant.some(q=>!questStates[q.id]&&q.area===a.id)?'!':'';
-  return `<div class="area-tile ${selected===a.id?'active':''}"><img src="/images/area-${a.id}.webp" alt="${esc(a.name)}场景"><div><h3>${esc(a.name)} ${open?marker:'🔒'}</h3><p>${esc(a.description)}</p>${button(open?(selected===a.id?'正在探索':'进入'):'🔒 尚未解锁','enter_area',!open,`data-area="${a.id}"`)}</div></div>`;}).join('')}</div></section>`;
+  return `<div class="area-tile ${selected===a.id?'active':''}"><img src="/images/area-${a.id}.webp" alt="${esc(a.name)}场景"><div><h3>${esc(a.name)} ${open?marker:'🔒'}</h3><p>${esc(regionLine(a.id,state))}</p>${button(open?(selected===a.id?'正在探索':'进入'):'🔒 尚未解锁','enter_area',!open,`data-area="${a.id}"`)}</div></div>`;}).join('')}</div></section>`;
 }
 export function areaView(data,id){
  const a=areas.find(x=>x.id===id),s=data.state,mine=data.players.find(p=>p.id===data.me);

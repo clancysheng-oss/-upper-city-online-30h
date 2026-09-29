@@ -7,6 +7,7 @@ import { powers, spellcasters } from "./powers.js";
 import { wondersGoods, companionProfile } from "./areas.js";
 import { mapView, areaView, questJournal, sideBattleArt } from "./areas-view.js";
 import {experienceProgress} from './progression.js';
+import {deepChapters,classRoutes,companionInterjections} from './deep-story.js';
 export const esc = (s) =>
   String(s ?? "").replace(
     /[&<>"']/g,
@@ -39,6 +40,30 @@ function exploreView(s) {
     })
     .join("")}</div></section>`;
 }
+function deepView(s,mine,players){
+ const c=deepChapters[s.chapter],d=s.deep||{},talk=d.talk?.[s.chapter]||[],inspected=d.inspected?.[s.chapter],route=d.route?.[s.chapter];
+ const prior=[
+  [3,0,'城门的驿夫贝伦认出你们，主动指明宴会后门；他记得你们听完了他的证词。'],
+  [12,3,'封蜡匠绮恩带来的旧纹印证了图书馆被烫过的页角。'],
+  [21,5,'灰市搬运工阿蒙兑现承诺，为你们指出断桥下的检修道。'],
+  [26,18,'记录员丹缇保存的撤离名单让凯尔认出被删改的证人。']
+ ].filter(([chapter,source])=>s.chapter===chapter&&d.storyFlags?.[`${source}_witness_0`]).map(([, ,text])=>`<p class="finding">先前决定的回响：${esc(text)}</p>`).join('');
+ const region=s.chapter<10?'三只旧酒桶':s.chapter<20?'奇迹高堂':s.chapter<25?'至高大厅':'上城区城墙';
+ const interject=players.find(p=>p.is_companion)?.name;
+ return `<section class="story-step deep-story"><div class="step-title"><span>新</span><h3>${esc(c.scene)} · ${esc(c.focus)}</h3></div><p>从${esc(region)}传来的消息正与本章事件相连。你们也可以进入对应区域查证。</p>${prior}
+ <div class="npc-line"><strong>${esc(c.npc)} · ${esc(c.role)}</strong><p>${esc(c.lines[0])}</p></div>
+ <p class="muted">主动询问不同问题；全队共享调查与回答。</p>
+ ${['追问当晚发生了什么','询问谁还知道内情','质疑证词并要求证据'].map((label,i)=>button(label,'deep_talk',talk.includes(String(i)),`data-choice="${i}" class="choice"`)).join('')}
+ ${talk.map(i=>`<div class="dialogue-history"><p>${esc(c.npc)}：${esc(c.lines[Number(i)])}</p></div>`).join('')}
+ ${talk.length&&interject&&companionInterjections[s.chapter]?`<div class="finding"><strong>${esc(interject)}插话</strong><p>${esc(companionInterjections[s.chapter])}</p>${d.interjection?.[s.chapter]!==undefined?'<p>回应已记入队伍记录。</p>':[button('支持伙伴','deep_interject',false,'data-choice="0"'),button('提出异议','deep_interject',false,'data-choice="1"'),button('保持沉默','deep_interject',false,'data-choice="2"')].join('')}</div>`:''}
+ <div class="encounter"><strong>探索 · ${esc(c.object)}</strong><p>仔细检查这里留下的物证；成功会解锁一条隐藏线索及更稳妥的谈判路线。</p><p class="muted">${esc(c.skill)}检定 · DC ${c.dc}</p>${button(inspected?'已调查':'调查物证','deep_inspect',Boolean(inspected))}</div>
+ ${d.explorationFlags?.[`${s.chapter}_secret`]?`<p class="finding">隐藏发现：${esc(c.secret)}</p>`:''}
+ ${mine.is_host?`<div class="deep-routes"><h4>👑 队伍处理方式</h4><p>${route?`已记录：${esc(route)}。后续 NPC 和遭遇将读取这一决定。`:'证据与交涉可解决普通遭遇；失败时仍可按原路线继续。'}</p>
+ ${button('以证据交涉 · D20','deep_route',Boolean(route), 'data-choice="0"')}
+ ${button('正面突破','deep_route',Boolean(route),'data-choice="1"')}
+ ${button(`[${esc(mine.class_name)}] ${esc(classRoutes[mine.class_name]?.[0]||'职业判断')} · D20`,'deep_route',Boolean(route),`data-choice="2" data-class="${esc(mine.class_name)}"`)}
+ </div>`:''}</section>`;
+}
 function choiceView(s, chapter, mine, combat) {
   const explored =
       (s.explored || []).filter((x) => x.startsWith(`${s.chapter}:`)).length >=
@@ -54,11 +79,11 @@ function battleView(s, players, mine, messages) {
   const fighting = c.hp > 0;
   const defeated = fighting && c.turn == null && players.every(p=>p.hp<=0);
   const battleStart=messages.findLastIndex(m=>m.body?.includes(c.name)&&['advance','area_quest'].includes(m.kind));
-  const latest = messages.slice(battleStart<0?0:battleStart+1).findLast(m=>['attack','power','companion_attack','companion_skill','heal','death_save','retry'].includes(m.kind));
+  const latest = messages.slice(battleStart<0?0:battleStart+1).findLast(m=>['attack','power','companion_attack','companion_skill','heal','death_save','retry','deep'].includes(m.kind));
   const foes = c.enemies || [
     { name: c.name, hp: c.hp, max_hp: c.max_hp, ac: c.ac },
   ];
-  return `<section class="card battle-stage" id="battle"><div class="battle-heading"><p class="muted">⚔️ 第 ${c.round} 回合 · ${defeated?'队伍败退':fighting ? "战斗中" : "胜利"}</p><h2>${esc(c.name)}</h2><p>${esc(sideArt?.intro || battleByChapter.get(s.chapter)?.intro || "")}</p></div>${art ? `<img class="battle-banner" src="${art}" alt="${esc(c.name)}战斗场景">` : ""}<div class="enemy-grid">${foes.map((foe, i) => `<div class="enemy ${foe.hp <= 0 ? "defeated" : ""}"><strong>${esc(foe.name)}</strong><p>HP ${foe.hp}/${foe.max_hp} · AC ${foe.ac}</p><div class="hpbar"><span style="width:${Math.max(0, Math.min(100, (foe.hp / foe.max_hp) * 100))}%"></span></div>${foe.hp <= 0 ? "<small>已击倒</small>" : ""}</div>`).join("")}</div><p class="turn-indicator">${defeated?'队伍全员倒地。房主可以重整队伍，原战斗重新开始。':fighting ? `当前行动：${esc(players.find((p) => p.id === c.turn)?.name || "等待救援")}` : "敌方全灭，可以继续调查与推进"}</p>${latest?`<div class="battle-result" role="status"><strong>最近战斗结果 · ${esc(latest.sender)}</strong><p>${esc(latest.body)}</p></div>`:''}${defeated&&mine.is_host?button('👑 重整队伍并重试','retry'):''}${fighting&&!defeated?`${powersView(mine,s,c,players,true)}<div class="battle-actions"><label>攻击目标<select id="attackTarget">${foes.map((foe, i) => `<option value="${i}" ${foe.hp <= 0 ? "disabled" : ""}>${esc(foe.name)} · HP ${foe.hp}/${foe.max_hp}</option>`).join("")}</select></label>${button("⚔️ 攻击选中敌人", "attack", c.turn !== mine.id || mine.hp <= 0)}${players.filter(p=>p.is_companion).map(p=>`${button(`🏹 ${esc(p.name)}射击`,"companion_attack",c.turn!==p.id||p.hp<=0,`data-companion="${p.id}"`)}${button("✨ 棱光箭", "companion_skill",c.turn!==p.id||p.hp<=0||p.ability_charges<1,`data-companion="${p.id}"`)}`).join("")}<label>药水目标<select id="healTarget">${players.map((p) => `<option value="${p.id}" ${p.id === mine.id ? "selected" : ""}>${esc(p.name)} · HP ${p.hp}/${p.max_hp}</option>`).join("")}</select></label>${button("使用治疗药水", "heal", !mine.inventory.includes("治疗药水") || c.turn !== mine.id)}</div>`:''}</section>`;
+  return `<section class="card battle-stage" id="battle"><div class="battle-heading"><p class="muted">⚔️ 第 ${c.round} 回合 · ${defeated?'队伍败退':fighting ? "战斗中" : "胜利"}</p><h2>${esc(c.name)}</h2><p>${esc(sideArt?.intro || battleByChapter.get(s.chapter)?.intro || "")}</p></div>${art ? `<img class="battle-banner" src="${art}" alt="${esc(c.name)}战斗场景">` : ""}<div class="enemy-grid">${foes.map((foe, i) => `<div class="enemy ${foe.hp <= 0 ? "defeated" : ""}"><strong>${esc(foe.name)}</strong><p>HP ${foe.hp}/${foe.max_hp} · AC ${foe.ac}</p><div class="hpbar"><span style="width:${Math.max(0, Math.min(100, (foe.hp / foe.max_hp) * 100))}%"></span></div>${foe.hp <= 0 ? "<small>已击倒</small>" : ""}</div>`).join("")}</div><p class="turn-indicator">${defeated?'队伍全员倒地。房主可以重整队伍，原战斗重新开始。':fighting ? `当前行动：${esc(players.find((p) => p.id === c.turn)?.name || "等待救援")}` : "敌方全灭，可以继续调查与推进"}</p>${fighting&&c.environment?.length?`<div class="battle-environment"><h3>⚙️ 战场环境</h3>${c.environment.map((o,i)=>button(`${o.name} · ${o.kind==='blast'?`范围伤害 ${o.amount}`:o.kind==='cover'?`掩体 AC +${o.amount}`:o.kind==='push'?'推落边缘敌人 · 运动检定':'阻断敌方援军'}`,"deep_environment",o.used||c.turn!==mine.id||mine.hp<=0,`data-object="${i}"`)).join("")}</div>`:""}${c.refusing?.length?`<p class="finding">${players.filter(p=>c.refusing.includes(p.id)).map(p=>esc(p.name)).join("、")}拒绝参加本场战斗；战后仍留在队伍。</p>`:""}${latest?`<div class="battle-result" role="status"><strong>最近战斗结果 · ${esc(latest.sender)}</strong><p>${esc(latest.body)}</p></div>`:''}${defeated&&mine.is_host?button('👑 重整队伍并重试','retry'):''}${fighting&&!defeated?`${powersView(mine,s,c,players,true)}<div class="battle-actions"><label>攻击目标<select id="attackTarget">${foes.map((foe, i) => `<option value="${i}" ${foe.hp <= 0 ? "disabled" : ""}>${esc(foe.name)} · HP ${foe.hp}/${foe.max_hp}</option>`).join("")}</select></label>${button("⚔️ 攻击选中敌人", "attack", c.turn !== mine.id || mine.hp <= 0)}${players.filter(p=>p.is_companion).map(p=>`${button(`🏹 ${esc(p.name)}射击`,"companion_attack",c.turn!==p.id||p.hp<=0,`data-companion="${p.id}"`)}${button("✨ 棱光箭", "companion_skill",c.turn!==p.id||p.hp<=0||p.ability_charges<1,`data-companion="${p.id}"`)}`).join("")}<label>药水目标<select id="healTarget">${players.map((p) => `<option value="${p.id}" ${p.id === mine.id ? "selected" : ""}>${esc(p.name)} · HP ${p.hp}/${p.max_hp}</option>`).join("")}</select></label>${button("使用治疗药水", "heal", !mine.inventory.includes("治疗药水") || c.turn !== mine.id)}</div>`:''}</section>`;
 }
 function powersView(mine, s, combat, players, inBattle=false) {
   const known = powers.filter(
@@ -112,7 +137,7 @@ export function renderGame(data, error, selectedArea=null, savedRoom=false) {
     combat = s.combat,
     prior=s.chapter>0?chapters[s.chapter-1]:null,
     priorChoice=prior?.choices.find(c=>flags.includes(c.flag));
-  return `${battleView(s, data.players, mine, data.messages)}${combat?.hp>0&&error?`<p class="error" role="alert">${esc(error)}</p>`:''}${mapView(s,selectedArea)}${selectedArea&&error?`<p class="error">${esc(error)}</p>`:""}<div class="grid"><div>${selectedArea?areaView(data,selectedArea):`<section class="card story-card"><p class="muted">${esc(chapter.act)} · 第 ${chapter.id + 1}/30 章</p><h2>${esc(chapter.title)}</h2><p class="story-lead">${esc(chapter.lead)}</p>${prior?`<p class="story-recap">前情 · ${esc(prior.title)}：${esc(prior.text)}${priorChoice?`你们选择了「${esc(priorChoice.label)}」。`:''}</p>`:''}<p>${esc(contextualText(chapter, flags))}</p><p class="story-goal">本章目标：与${esc(dialogues[s.chapter].name)}交谈，调查「${esc(encounters[s.chapter][0][0])}」及「${esc(encounters[s.chapter][1][0])}」，再决定队伍的行动。</p>${dialogueView(s)}${exploreView(s)}${choiceView(s, chapter, mine, combat)}</section>`}<section class="card"><h3>自由行动与检定</h3><textarea id="chat" maxlength="500" placeholder="描述角色的行动、对白或计划"></textarea><div class="row">${button("发送行动", "chat")}<select id="skill" style="width:auto;margin:0">${["调查", "洞悉", "说服", "潜行", "运动", "奥秘", "求生"].map((x) => `<option>${x}</option>`).join("")}</select><input id="dc" type="number" value="15" min="5" max="30" title="难度 DC" style="width:72px;margin:0">${button("D20 检定", "roll")}</div></section><section class="card"><h3>队伍行动记录</h3><div class="log">${[
+  return `${battleView(s, data.players, mine, data.messages)}${combat?.hp>0&&error?`<p class="error" role="alert">${esc(error)}</p>`:''}${mapView(s,selectedArea)}${selectedArea&&error?`<p class="error">${esc(error)}</p>`:""}<div class="grid"><div>${selectedArea?areaView(data,selectedArea):`<section class="card story-card"><p class="muted">${esc(chapter.act)} · 第 ${chapter.id + 1}/30 章</p><h2>${esc(chapter.title)}</h2><p class="story-lead">${esc(chapter.lead)}</p>${prior?`<p class="story-recap">前情 · ${esc(prior.title)}：${esc(prior.text)}${priorChoice?`你们选择了「${esc(priorChoice.label)}」。`:''}</p>`:''}<p>${esc(contextualText(chapter, flags))}</p><p class="story-goal">本章目标：与${esc(dialogues[s.chapter].name)}交谈，调查「${esc(encounters[s.chapter][0][0])}」及「${esc(encounters[s.chapter][1][0])}」，再决定队伍的行动。</p>${dialogueView(s)}${exploreView(s)}${deepView(s,mine,data.players)}${choiceView(s, chapter, mine, combat)}</section>`}<section class="card"><h3>自由行动与检定</h3><textarea id="chat" maxlength="500" placeholder="描述角色的行动、对白或计划"></textarea><div class="row">${button("发送行动", "chat")}<select id="skill" style="width:auto;margin:0">${["调查", "洞悉", "说服", "潜行", "运动", "奥秘", "求生"].map((x) => `<option>${x}</option>`).join("")}</select><input id="dc" type="number" value="15" min="5" max="30" title="难度 DC" style="width:72px;margin:0">${button("D20 检定", "roll")}</div></section><section class="card"><h3>队伍行动记录</h3><div class="log">${[
     ...data.messages,
   ]
     .reverse()
