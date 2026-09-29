@@ -36,7 +36,7 @@ begin
    if v_done ? v_idx::text then raise exception 'ALREADY_DISCUSSSED'; end if;
    v_done:=v_done||to_jsonb(v_idx::text);
    v_deep:=jsonb_set(v_deep,array['talk',v_key],v_done,true);
-   v_log:=v_data.npc||'：'||(v_data.lines->>v_idx);
+   v_log:=v_data.npc||'：'||(v_data.lines->>(v_idx+1));
    v_deep:=jsonb_set(v_deep,array['storyFlags',v_key||'_witness_'||v_idx],to_jsonb(true),true);
    -- Persistent, contextual approval. Disapproval never removes a companion.
    select * into v_comp from public.players where room_code=v_code and is_companion order by id limit 1;

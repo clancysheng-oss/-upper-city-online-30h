@@ -48,13 +48,12 @@ function deepView(s,mine,players){
   [21,5,'灰市搬运工阿蒙兑现承诺，为你们指出断桥下的检修道。'],
   [26,18,'记录员丹缇保存的撤离名单让凯尔认出被删改的证人。']
  ].filter(([chapter,source])=>s.chapter===chapter&&d.storyFlags?.[`${source}_witness_0`]).map(([, ,text])=>`<p class="finding">先前决定的回响：${esc(text)}</p>`).join('');
- const region=s.chapter<10?'三只旧酒桶':s.chapter<20?'奇迹高堂':s.chapter<25?'至高大厅':'上城区城墙';
  const interject=players.find(p=>p.is_companion)?.name;
- return `<section class="story-step deep-story"><div class="step-title"><span>新</span><h3>${esc(c.scene)} · ${esc(c.focus)}</h3></div><p>从${esc(region)}传来的消息正与本章事件相连。你们也可以进入对应区域查证。</p>${prior}
+ return `<section class="story-step deep-story"><div class="step-title"><span>新</span><h3>${esc(c.scene)} · ${esc(c.focus)}</h3></div><p>沿着本章线索来到另一处现场。可以先询问见证人，再检查遗留的物证。</p>${prior}
  <div class="npc-line"><strong>${esc(c.npc)} · ${esc(c.role)}</strong><p>${esc(c.lines[0])}</p></div>
  <p class="muted">主动询问不同问题；全队共享调查与回答。</p>
  ${['追问当晚发生了什么','询问谁还知道内情','质疑证词并要求证据'].map((label,i)=>button(label,'deep_talk',talk.includes(String(i)),`data-choice="${i}" class="choice"`)).join('')}
- ${talk.map(i=>`<div class="dialogue-history"><p>${esc(c.npc)}：${esc(c.lines[Number(i)])}</p></div>`).join('')}
+ ${talk.map(i=>`<div class="dialogue-history"><p>${esc(c.npc)}：${esc(c.lines[Number(i)+1])}</p></div>`).join('')}
  ${talk.length&&interject&&companionInterjections[s.chapter]?`<div class="finding"><strong>${esc(interject)}插话</strong><p>${esc(companionInterjections[s.chapter])}</p>${d.interjection?.[s.chapter]!==undefined?'<p>回应已记入队伍记录。</p>':[button('支持伙伴','deep_interject',false,'data-choice="0"'),button('提出异议','deep_interject',false,'data-choice="1"'),button('保持沉默','deep_interject',false,'data-choice="2"')].join('')}</div>`:''}
  <div class="encounter"><strong>探索 · ${esc(c.object)}</strong><p>仔细检查这里留下的物证；成功会解锁一条隐藏线索及更稳妥的谈判路线。</p><p class="muted">${esc(c.skill)}检定 · DC ${c.dc}</p>${button(inspected?'已调查':'调查物证','deep_inspect',Boolean(inspected))}</div>
  ${d.explorationFlags?.[`${s.chapter}_secret`]?`<p class="finding">隐藏发现：${esc(c.secret)}</p>`:''}

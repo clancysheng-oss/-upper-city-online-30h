@@ -42,7 +42,8 @@ for(let chapter=0;chapter<30;chapter++){
  state=await as(a,'select public.party_snapshot($1) v',[code]);
  assert.equal(state.state.chapter,chapter);
  assert.equal(deepChapters[chapter].id,chapter);
- await deep(chapter%2?b:a,'talk',{choice:0});
+ const witness=await deep(chapter%2?b:a,'talk',{choice:0});
+ assert(witness.messages.some(m=>m.body.includes(deepChapters[chapter].lines[1])),'first answer differs from greeting');
  state=await deep(chapter%2?a:b,'inspect');
  assert.equal(state.state.deep.inspected[chapter],true);
  if(chapter===0){
@@ -106,4 +107,7 @@ const beforeApproval=(await as(a,'select public.party_snapshot($1) v',[code])).s
 const comment=await deep(b,'interject',{choice:0});
 assert.equal(comment.state.deep.companionApproval[companion],beforeApproval+5);
 assert(comment.players.some(p=>p.id===companion));
+await db.query("update public.game_states set state=state-'deep' where room_code=$1",[code]);
+const legacy=await deep(a,'talk',{choice:1});
+assert(legacy.state.deep.storyFlags['28_witness_1'],'legacy state without new fields is upgraded on demand');
 console.log(`V3.0 PASS: 30 chapters, ${fights} real battles, ${skipped} skipped encounters, ${environmentHits} environment hits, wizard equipment, companion refusal/interjection, save and second-player reconnect`);
