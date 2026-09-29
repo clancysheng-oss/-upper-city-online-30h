@@ -52,7 +52,7 @@ function deepView(s,mine,players){
  return `<section class="story-step deep-story"><div class="step-title"><span>新</span><h3>${esc(c.scene)} · ${esc(c.focus)}</h3></div><p>沿着本章线索来到另一处现场。可以先询问见证人，再检查遗留的物证。</p>${prior}
  <div class="npc-line"><strong>${esc(c.npc)} · ${esc(c.role)}</strong><p>${esc(c.lines[0])}</p></div>
  <p class="muted">主动询问不同问题；全队共享调查与回答。</p>
- ${['追问当晚发生了什么','询问谁还知道内情','质疑证词并要求证据'].map((label,i)=>button(label,'deep_talk',talk.includes(String(i)),`data-choice="${i}" class="choice"`)).join('')}
+ ${c.questions.map((label,i)=>button(label,'deep_talk',talk.includes(String(i)),`data-choice="${i}" class="choice"`)).join('')}
  ${talk.map(i=>`<div class="dialogue-history"><p>${esc(c.npc)}：${esc(c.lines[Number(i)+1])}</p></div>`).join('')}
  ${talk.length&&interject&&companionInterjections[s.chapter]?`<div class="finding"><strong>${esc(interject)}插话</strong><p>${esc(companionInterjections[s.chapter])}</p>${d.interjection?.[s.chapter]!==undefined?'<p>回应已记入队伍记录。</p>':[button('支持伙伴','deep_interject',false,'data-choice="0"'),button('提出异议','deep_interject',false,'data-choice="1"'),button('保持沉默','deep_interject',false,'data-choice="2"')].join('')}</div>`:''}
  <div class="encounter"><strong>探索 · ${esc(c.object)}</strong><p>仔细检查这里留下的物证；成功会解锁一条隐藏线索及更稳妥的谈判路线。</p><p class="muted">${esc(c.skill)}检定 · DC ${c.dc}</p>${button(inspected?'已调查':'调查物证','deep_inspect',Boolean(inspected))}</div>
@@ -143,7 +143,7 @@ export function renderGame(data, error, selectedArea=null, savedRoom=false) {
     .map((m) => `<p><strong>${esc(m.sender)}</strong>：${esc(m.body)}</p>`)
     .join(
       "",
-    )}</div></section></div><aside><section class="card"><h3>队伍角色</h3>${data.players.map((p) => `<div class="member">${p.is_host ? "👑 " : ""}${character(p)}</div>`).join("")}${data.players.some(p=>p.is_companion)?`<p class="muted">${esc(companionProfile.race)} · ${esc(companionProfile.background)}<br>${esc(companionProfile.active)}<br>${esc(companionProfile.passive)}</p>`:""}<div class="row">${savedRoom?"":button("离开", "leave")}${savedRoom?"":button("接任离线房主", "claim")}</div></section><section class="card"><h3>任务与线索</h3><p>主线：${esc(chapter.title)}</p><p>已完成章节 ${(s.completed_quests || []).length}/30</p>${sideQuests
+    )}</div></section></div><aside><section class="card"><h3>队伍角色</h3>${data.players.map((p) => `<div class="member">${p.is_host ? "👑 " : ""}${character(p)}${p.is_companion?`<p class="muted">伙伴态度 ${s.deep?.companionApproval?.[p.id]??0} · ${((s.deep?.companionApproval?.[p.id]??0)<0)?"对某些残酷行动会提出异议":"愿意讨论队伍抉择"}</p>`:""}</div>`).join("")}${data.players.some(p=>p.is_companion)?`<p class="muted">${esc(companionProfile.race)} · ${esc(companionProfile.background)}<br>${esc(companionProfile.active)}<br>${esc(companionProfile.passive)}</p>`:""}<div class="row">${savedRoom?"":button("离开", "leave")}${savedRoom?"":button("接任离线房主", "claim")}</div></section><section class="card"><h3>任务与线索</h3><p>主线：${esc(chapter.title)}</p><p>已完成章节 ${(s.completed_quests || []).length}/30</p>${sideQuests
     .filter((q) => chapter.id >= q.from && chapter.id <= q.to)
     .map(
       (q) =>
