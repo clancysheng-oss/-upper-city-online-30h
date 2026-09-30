@@ -60,7 +60,7 @@ async function slotAction(action,slot){if(busy)return;busy=true;error='';notice=
  if(action==='slot_enter'){activeSlot=slot;data=await enterSlot(slot);}
  if(action==='slot_adopt'){activeSlot=slot;data=await saveSlot('adopt',slot,previousRoom);}
  if(action==='slot_resume'){data=await command(previousRoom,'heartbeat');}
- if(data){selectedArea=data.state.current_area==='city'?null:data.state.current_area||null;setRoom(data.room);slots=await listSlots();render();}
+ if(data){seenRoll=data.state.last_roll?.at||'';rollOpen=false;selectedArea=data.state.current_area==='city'?null:data.state.current_area||null;setRoom(data.room);slots=await listSlots();render();}
  }catch(e){activeSlot=null;error=actionError(e);render();}finally{busy=false;}}
 async function runArea(action,payload){if(busy)return;busy=true;error='';notice='';try{acceptState(await areaCommand(room,action,payload));render();}catch(e){error=actionError(e);render();}finally{busy=false;}}
 root.addEventListener('change',e=>{if(e.target.id==='power'){const power=powers.find(p=>p.id===e.target.value);if(power&&document.querySelector('#slot'))document.querySelector('#slot').value=String(power.ring);}});

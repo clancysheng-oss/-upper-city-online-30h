@@ -10,6 +10,7 @@ import {actionCheckKey,itemPrice,canReroll} from '../src/checks.js';
 import {checksPanel} from '../src/world-view.js';
 import {diceOverlay} from '../src/identity-view.js';
 await db.exec(fs.readFileSync('db/032_v41_playtest_fixes.sql','utf8'));
+await db.exec(fs.readFileSync('db/033_v41_resume_combat.sql','utf8'));
 await db.exec('begin');
 const ids=['00000000-0000-0000-0000-0000000000b1','00000000-0000-0000-0000-0000000000b2'];
 for(const id of ids)await db.query('insert into auth.users(id) values($1)',[id]);
@@ -178,5 +179,15 @@ assert.equal(fallback.state.checks[key].result.success,false);
 assert.equal(fallback.state.checks[key].attempts,1);
 await assert.rejects(area(0,'area_quest_fallback',{area:'kegs',quest:'star'}),/QUEST_FALLBACK_UNAVAILABLE/);
 assert.equal((await db.query("select has_function_privilege('authenticated','public.party_area_v412_core(text,text,jsonb)','execute') allowed")).rows[0].allowed,false);
+
+
+// Actual-play regression: leave during single-player combat, resume with null turn.
+await command(1,'leave');
+await context('city',2);
+await db.query("update game_states set state=jsonb_set(state,'{combat}',jsonb_build_object('hp',12,'round',1,'turn',$2::bigint,'enemies',jsonb_build_array(jsonb_build_object('name','追猎者','hp',12,'max_hp',12,'ac',5,'attack_bonus',0,'damage_min',1,'damage_die',1)),'initiative',jsonb_build_array(jsonb_build_object('id',$2::bigint,'roll',10)))) where room_code=$1",[room,a.me]);
+await command(0,'leave');
+assert.equal((await db.query("select state#>>'{combat,turn}' turn from game_states where room_code=$1",[room])).rows[0].turn,null);
+const reconnected=await command(0,'heartbeat');assert.equal(reconnected.state.combat.turn,a.me);
+const attacked=await command(0,'attack',{enemy:0});assert.ok(attacked.messages.some(m=>m.kind==='attack'));
 
 await db.exec('rollback');await db.close();console.log('V4.1 action rewards, multiplayer locks, Inspiration rerolls, risks, economy and persistence passed');
