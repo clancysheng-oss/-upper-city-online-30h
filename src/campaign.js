@@ -1,3 +1,5 @@
+import {novelChapters,storyEchoes} from './novel-story.js';
+import {decisionEffects} from './novel-consequences.js';
 // Original Upper City campaign. Each chapter has several encounters; choice flags persist and shape later text/endings.
 import {battleByChapter} from './battles.js';
 export const acts = [
@@ -44,7 +46,7 @@ export const acts = [
     ['黎明之后','街道还在，城市却已经变了。盟友根据一路的承诺决定留下或离开。','记录后日谈','队伍编年史','epilogue','继续探索','legacy']
   ]}
 ];
-export const chapters=acts.flatMap((act, ai)=>act.chapters.map((c,ci)=>({id:ai*5+ci,act:act.name,lead:act.lead,title:c[0],text:c[1],choices:[{label:c[2],clue:c[3],flag:c[4]},{label:c[5],flag:c[6]}],combat:battleByChapter.has(ai*5+ci)})));
+export const chapters=acts.flatMap((act, ai)=>act.chapters.map((c,ci)=>({id:ai*5+ci,act:act.name,lead:act.lead,title:c[0],text:c[1],choices:[{label:c[2],clue:c[3],flag:c[4]},{label:c[5],flag:c[6]}],combat:battleByChapter.has(ai*5+ci)}))).map((c,id)=>({...c,title:novelChapters[id].title,text:novelChapters[id].text,goal:novelChapters[id].goal,mode:novelChapters[id].mode,lead:['一张会抹去姓名的契约，将陌生人的邀请变成需要承担的选择。','追查姓名交易，也面对帮凶与受害者相互缠绕的生活。','古老的纸是真的，同意与正义却从未因此自动成立。','城市地基下仍住着人；他们不需要你们替他们编一个好结尾。','证据开始改变城市，曾经的承诺也开始要求兑现。','废止旧债、审理责任与建立未来，必须由活着的人共同决定。'][Math.floor(id/5)],choices:novelChapters[id].decisions.map((label,i)=>({...((c.choices[i])||{flag:`n5_choice_${id}_${i}`}),label,outcome:decisionEffects[id][i]}))}));
 export const classes={战士:{hp:14,ac:16,stats:[16,12,14,10,10,10],attack:5,damage:8,skill:'运动'},游荡者:{hp:10,ac:14,stats:[10,16,12,12,10,12],attack:5,damage:6,skill:'调查'},法师:{hp:8,ac:12,stats:[8,12,12,16,12,10],attack:5,damage:8,skill:'奥秘'},牧师:{hp:11,ac:15,stats:[12,10,14,10,16,12],attack:4,damage:6,skill:'洞悉'},游侠:{hp:11,ac:14,stats:[12,16,12,12,14,10],attack:5,damage:8,skill:'求生'},吟游诗人:{hp:10,ac:13,stats:[10,14,12,12,10,16],attack:4,damage:6,skill:'说服'},圣武士:{hp:13,ac:16,stats:[16,10,14,10,12,16],attack:5,damage:8,skill:'运动'}};
 
 export const npcs=[
@@ -66,10 +68,10 @@ export function contextualText(chapter,flags=[]){
  const extra=[];
  if(chapter.id>0&&flags.includes(`voice_${chapter.id-1}_trust`))extra.push('上一站赢得信任的证人已悄悄将你们的名字传给下一位联系人。');
  if(chapter.id>0&&flags.includes(`support_${chapter.id-1}_protect`))extra.push('你们先前安排人手保护旁观者，这一带有人主动替队伍放哨。');
- if(chapter.id>=20&&flags.includes('workers'))extra.push('曾得到你们帮助的工人已经开始联络各街区。');
- if(chapter.id>=20&&flags.includes('archive'))extra.push('图书馆保存了你们带回的原始档案。');
- if(chapter.id>=20&&flags.includes('rescued'))extra.push('盐井的幸存者愿意以自己的姓名作证。');
- if(chapter.id>=25&&flags.includes('mercy'))extra.push('获宽恕的议员带来了另一份证词。');
- if(chapter.id>=27&&flags.includes('defector'))extra.push('守门人和他的部下选择为你们开路。');
- return [chapter.text,...extra].join(' ');
+ if(chapter.id===22&&flags.includes('workers'))extra.push('曾得到你们帮助的工人已经开始联络各街区。');
+ if(chapter.id===23&&flags.includes('archive'))extra.push('图书馆保存了你们带回的原始档案。');
+ if(chapter.id===24&&flags.includes('rescued'))extra.push('盐井的幸存者愿意以自己的姓名作证。');
+ if(chapter.id===25&&flags.includes('mercy'))extra.push('得到作证保护的议员带来另一份证词；这项保护没有免除他的责任。');
+ if(chapter.id===27&&flags.includes('defector'))extra.push('守门人和他的部下选择为你们开路。');
+ return [chapter.text,...storyEchoes(flags,chapter.id),...extra].join('\n\n');
 }

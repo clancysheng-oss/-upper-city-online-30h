@@ -37,14 +37,14 @@ const base = {
   },
 };
 let html = renderGame(base, "");
-assert(html.includes("与 守门人哈罗 对话"));
+assert(html.includes("守门人哈罗"));
 assert(html.includes("先完成当前章节的 NPC 对话"));
 assert(html.includes("城门补给商艾米"));
 assert(!html.includes("灰市铁匠穆雷"));
 assert(html.indexOf("story-card") > 0);
 base.state.dialogue = { chapter: 0, step: 3, history: [] };
 html = renderGame(base, "");
-assert(html.includes("对话结束 · 调查地点已开放"));
+assert(html.includes("交谈已记录。"));
 assert(!html.includes("先完成当前章节的 NPC 对话"));
 base.state.chapter = 5;
 base.state.dialogue = { chapter: 5, step: 3, history: [] };
@@ -78,7 +78,7 @@ assert(
   dialogues.length === 30 &&
     dialogues.every(
       (d) =>
-        d.beats.length === 3 && d.beats.every((b) => b.options.length === 2),
+        d.beats.length === 3 && d.beats.every((b) => b.options.length >= 4),
     ),
 );
 assert(

@@ -1,3 +1,4 @@
+import {novelEpilogue} from './novel-epilogues.js';
 import {esc,button} from './views.js';
 
 const art='/images/v4-final-victory.webp';
@@ -32,7 +33,8 @@ export function finaleView(data,step='ending'){
  return `<section class="finale" id="finale"><img src="${art}" alt="Upper City 破晓后的胜利景象"><div class="finale-copy"><p class="muted">UPPER CITY · THE THIRTEENTH BELL</p><h2 class="${step==='the_end'?'the-end':''}">${esc(title)}</h2><p>${body}</p>${details}<p class="muted">${esc(party)}</p><div class="row">${actions}</div></div></section>`;
 }
 
-function endingConsequences(data){const s=data.state,flags=s.flags||[],saved=s.deep?.storyFlags||{};const parts=['最后的敌人已被击败，散落在大厅的证物由活着的证人逐一认领。'];if(flags.includes('defector'))parts.push('曾选择倒戈的守卫替队伍守住侧门，军令终于可以在众人面前核对。');if(Object.keys(saved).some(key=>key.includes('protect')||key.includes('rescued')))parts.push('早年被你们保护的人来到听证席，补上原本会永远缺失的证词。');if(s.side_quests?.hearth?.status==='已完成')parts.push('亚岚保存的伤亡名册公开了每一个工人的姓名。');parts.push(s.ending==='公民议会重建'?'新的席位和公开记录正在建立；异议者仍有发言的位置。':s.ending==='地下自治联盟'?'地下居民获得自治承诺，城市必须学会与他们谈判。':'Upper City 迎来艰难的黎明，判决与承诺仍需要有人守护。');return parts.join(' ');}
+function endingConsequences(data){return novelEpilogue(data.state).map(esc).join('<br><br>');}
+
 function companionEpilogue(data){const s=data.state;return `<div class="companion-epilogue">${data.players.filter(p=>p.is_companion).map(p=>{const score=s.deep?.companionApproval?.[p.id]||0;const line=p.name==='亚岚·铜脉'?score<0?'“我们对很多事意见不同。但伤员回来了，我会留下修好那道门。”':'“我把每个活着回来的人都写进名册。明天还有墙要修，我跟你们一起去。”':score<0?'“这不是我会选择的每一步。至少今天，证人还能自己说话。”':'“当初我拒绝伪造巡逻表时，以为这座城再也不会听真话。你们让我改了主意。”';return `<blockquote><strong>${esc(p.name)}</strong><p>${esc(line)}</p></blockquote>`}).join('')}</div>`;}
 
 export async function downloadFinale(data){
