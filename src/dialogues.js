@@ -62,12 +62,12 @@ export const dialogues = chapters.map((chapter, i) => {
         options: [
           {
             label: `核实「${lead[6]}」的来历`,
-            reply: `${lead[4]} ${lead[5]}`,
+            reply: `${lead[1]} 我会守住现场；有关「${lead[6]}」的结论，等你们调查后再确认。`,
             flag: `approach_${i}_aid`,
           },
           {
             label: `先保护「${follow[6]}」的证人`,
-            reply: `${follow[4]} ${follow[5]}`,
+            reply: `${follow[1]} 先替证人安排退路，再由你们核实「${follow[6]}」。`,
             flag: `approach_${i}_caution`,
           },
         ],

@@ -11,10 +11,10 @@ const feats=[
  ['迅捷步伐','逃跑和移动相关检定更强'],
  ['属性训练','职业主属性 +2（上限 20）']
 ];
-export function buildView(mine){
+export function buildView(mine,combatActive=false){
  const points=mine.build?.points||0;
  if(!points)return '';
- return `<section class="card level-up"><p class="muted">角色成长 · 选择保存在当前角色</p><h2>LEVEL UP · ${esc(mine.name)}</h2><p>可用构筑点：${points}。同职业可以选择不同专长；每项仅能选一次。</p><div class="feat-grid">${feats.map(([name,text])=>`<article><strong>${name}</strong><p>${text}</p>${button(mine.build?.feats?.includes(name)?'已选择':'选择此专长','v4_world',mine.build?.feats?.includes(name),`data-kind="build" data-choice="${name}"`)}</article>`).join('')}</div></section>`;
+ return `<section class="card level-up"><p class="muted">角色成长 · 选择保存在当前角色</p><h2>LEVEL UP · ${esc(mine.name)}</h2><p>可用构筑点：${points}。同职业可以选择不同专长；每项仅能选一次。${combatActive?' 战斗结束后可以选择专长。':''}</p><div class="feat-grid">${feats.map(([name,text])=>`<article><strong>${name}</strong><p>${text}</p>${button(mine.build?.feats?.includes(name)?'已选择':'选择此专长','v4_world',combatActive||mine.build?.feats?.includes(name),`data-kind="build" data-choice="${name}"`)}</article>`).join('')}</div></section>`;
 }
 export function campView(data){
  const mine=data.players.find(p=>p.id===data.me),s=data.state;
