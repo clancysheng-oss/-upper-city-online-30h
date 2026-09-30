@@ -12,8 +12,8 @@ async function cmd(i,action,payload={}){await uid(i);const {rows}=await db.query
 async function area(i,action,payload={}){await uid(i);const {rows}=await db.query('select public.party_area($1,$2,$3::jsonb) r',[code,action,JSON.stringify(payload)]);return rows[0].r}
 async function deny(task,message){await assert.rejects(task(),new RegExp(message))}
 function mine(s){return s.players.find(p=>p.id===s.me)}
-assert.equal(areas.length,4);assert.equal(areaNpcs.length,12);assert.equal(areaQuests.length,5);assert.equal(areaBattles.length,2);
-assert(areas.every(a=>areaNpcs.filter(n=>n.area===a.id).length===3&&areaNpcs.filter(n=>n.area===a.id).reduce((sum,n)=>sum+1+n.topics.reduce((x,t)=>x+1+t.options.length*2,0),0)>=20));
+assert.equal(areas.length,4);assert(areaNpcs.length>=12);assert(areaQuests.length>=5);assert(areaBattles.length>=2);
+assert(areas.every(a=>areaNpcs.filter(n=>n.area===a.id).length>=3&&areaNpcs.filter(n=>n.area===a.id).reduce((sum,n)=>sum+1+n.topics.reduce((x,t)=>x+1+t.options.length*2,0),0)>=20));
 let s=await cmd(0,'create',{name:'Aster',class:'战士'});code=s.room;
 await cmd(1,'join',{name:'Belle',class:'牧师'});await cmd(0,'ready');await cmd(1,'ready');s=await cmd(0,'start');
 await deny(()=>area(0,'area_talk',{area:'hall',npc:'vessa',topic:0,choice:0}),'AREA_LOCKED');

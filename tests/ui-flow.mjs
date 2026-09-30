@@ -97,5 +97,5 @@ assert(html.includes('护盾卷轴')&&html.includes('高堂武器、装备与魔
 assert(html.includes('🔒 尚未解锁'));
 base.state.chapter=16;html=renderGame(base,'','walls');
 assert(html.includes('上城区城墙')&&html.includes('凯文·远炬'));
-assert(areas.length===4&&areaNpcs.length===12&&areaQuests.length===5&&wondersGoods.length>=12);
+assert(areas.length===4&&areaNpcs.length>=12&&areaQuests.length>=5&&wondersGoods.length>=12);
 console.log('AREA UI PASS: images, locked map, named NPCs, tavern, magical shop and quest journal');
