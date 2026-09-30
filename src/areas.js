@@ -109,3 +109,21 @@ export const wondersGoods = [
 ];
 
 export const companionProfile={name:'伊莉娅·棱光',race:'半精灵',profession:'游侠',background:'拒绝伪造城墙换岗报告的奥术护卫，信任保护证人的队伍。',active:'棱光箭：消耗 1 次职业能力，以更高命中和额外 8 点伤害攻击。',passive:'城墙警觉：每场战斗第一回合命中 +2。'};
+
+// V4 companion follows the same authored-area, quest, and battle catalogues.
+areaNpcs.push({id:'aran',area:'wonders',name:'亚岚·铜脉',role:'矮人战地牧师与炉心修复师',background:'曾替城墙锻造防火铰链；一次仓库爆炸后，他偷偷保存了真实的伤亡名册。',personality:'说话简短，忌讳空洞的誓言，遇见伤者会先动手救人',attitude:'戒备',intro:'这炉火不是给你铸勋章的。先告诉我谁还留在墙外。',topics:[
+ topic('封存的炉心在每次钟响时升温，仓库记录却说它早已报废。',['炉心藏着什么？','是被改写的撤离灯号；黄铜一热，假签名就浮上来。','他用钳子夹出一小块带字的铜皮。',1,'aran_copper'],['为何不交给大厅？','我试过。三个证人刚走出门就被人跟踪。','他让你去酒馆找保管伤亡表的人。',1,'aran_witness'],['你是不是自己弄坏了它？','我烧坏的是手，没烧坏名字。','他把烫伤的手藏进袖子。',-1,'aran_accuse']),
+ topic('真正的医药包不该只给有徽章的人。',['你曾在城墙救过谁？','一名传令兵和两个被命令留在外侧的工人；他们现在还活着。','他写下两名工人的外号。',1,'aran_rescue'],['可以教我处理伤口吗？','热铁不能直接贴上去。先洗净，再看有没有毒。','他把一卷干净绷带放在桌上。',1,'aran_heal'],['我们缺一名牧师。','缺人的队伍不少。我只跟肯把伤员带回来的人走。','他等你解释行动计划。',0,'aran_wait']),
+ topic('我曾为错误的门令铸过闩。现在想亲手把它拆下来。',['谁给你的图纸？','盖印的是大厅，画线的人却来自军需仓。','他指出图纸上故意少画的一道排水沟。',1,'aran_plan'],['你愿意与伊莉娅合作吗？','她守证人，我救伤员。如果你们不卖掉任一方，我愿意。','他第一次抬眼看向你的队伍。',1,'aran_ilya'],['事情结束以后呢？','还得有人补好城墙。胜利不是在酒馆里说一句话。','他把钳子塞回腰带。',0,'aran_future'])
+]});
+areaQuests.push({id:'hearth',name:'被封存的炉心',giver:'aran',area:'wonders',description:'追踪被军需仓封存的炉心和失踪伤员，决定是否邀请修复师亚岚同行。',reward:{gold:68,xp:135,item:'炉心护符'},stages:[
+ {area:'wonders',place:'修复室',label:'检验炉心留下的热纹',text:'铜片上的夜间灯号比官方档案晚了整整九息。',skill:'调查',dc:15},
+ {area:'kegs',npc:'sera',label:'核对酒馆保管的伤亡表',text:'瑟拉把两名工人的名字圈出：他们被登记成了无名死者。',skill:'洞悉',dc:14},
+ {area:'hall',npc:'vessa',label:'要求审计官提供军需仓封存令',text:'维莎找出一份用旧印盖的新命令，足以让你们合法接近城墙。',skill:'说服',dc:15},
+ {area:'walls',place:'军需仓',label:'发现被困伤员与尚未冷却的炉心',text:'铁门后有人敲出三声短讯；伏兵正在把炉心拖走。',skill:'察觉',dc:16},
+ {area:'walls',npc:'kevan',label:'决定行动优先次序',text:'队长肯分出人手，却要求你们先说明是否要带走仍活着的证人。',options:[['先救伤员并邀请亚岚','凯文打开侧门；亚岚相信你们愿意保护活人。','invite','说服',14],['先保住铜片证据','你保全了文件，但亚岚要继续独自照料伤员。','evidence'],['付钱请守卫私下放行','道路畅通，却失去了亚岚的信任。','bribe']]},
+ {area:'walls',label:'阻止焚毁炉心',text:'带盾的佣兵试图堵死侧门，术士在高台点燃引线。',battle:'hearth_raid'},
+ {area:'wonders',npc:'aran',label:'交还名册并处理伤员',text:'亚岚核对完每个幸存者的名字，决定是否与你们并肩前行。',finish:true,recruitOutcome:'invite'}
+]});
+areaBattles.push({id:'hearth_raid',name:'军需仓炉心伏击',intro:'火光在军需仓的铰链上跳动；亚岚正带伤员撤向侧门。',foes:[['封锁队长',58,17,6,5,8,'号令：阻拦侧门撤离'],['重甲堵门兵',44,16,5,4,7,'格挡：重甲掩护'],['高台点火术士',38,15,6,6,8,'投火：点燃引线'],['后巷弩手',34,14,6,4,7,'齐射：瞄准低护甲目标']]});
+export const secondCompanionProfile={name:'亚岚·铜脉',race:'矮人',profession:'牧师',background:'修复炉心时留下真实伤亡名册，拒绝让证人变成数字。',active:'战地祈祷：消耗能力次数，治疗一名队员；亦可使用符文震击。',passive:'矮人韧性：毒素豁免有优势，初始 HP 与护甲较高。'};

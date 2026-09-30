@@ -34,6 +34,9 @@ export function subscribe(code,onChange){
 }
 
 export async function areaCommand(code,action,payload={}){await ensureIdentity();const {data,error}=await client.rpc('party_area',{p_code:code,p_action:action,p_payload:payload});if(error)throw error;return data;}
+export async function racialCommand(code,action,target=0){await ensureIdentity();const {data,error}=await client.rpc('party_v4_racial',{p_code:code,p_action:action,p_target:target});if(error)throw error;return data;}
+export async function companionCommand(code,id,action,target=null){await ensureIdentity();const {data,error}=await client.rpc('party_v4_companion',{p_code:code,p_companion:id,p_action:action,p_target:target});if(error)throw error;return data;}
+export async function identityDialogue(code,route){await ensureIdentity();const {data,error}=await client.rpc('party_v4_dialogue',{p_code:code,p_route:route});if(error)throw error;return data;}
 export async function saveSlot(action,slot=null,room=null,name=null,cls=null){
  await ensureIdentity();const {data,error}=await client.rpc('party_save_slot',{p_action:action,p_slot:slot,p_room:room,p_name:name,p_class:cls});
  if(error)throw error;return data;
@@ -48,3 +51,5 @@ export function signalDeparture(code){
 }
 export async function enterRegion(code,area){await ensureIdentity();const {data,error}=await client.rpc('party_region',{p_code:code,p_area:area});if(error)throw error;return data;}
 export async function deepCommand(code,action,payload={}){await ensureIdentity();const {data,error}=await client.rpc('party_deep',{p_code:code,p_action:action,p_payload:payload});if(error)throw error;return data;}
+export async function identityCommand(code,action,payload={}){await ensureIdentity();const {data,error}=await client.rpc('party_v4_identity',{p_code:code,p_action:action,p_payload:payload});if(error)throw error;return data;}
+export async function worldCommand(code,action,payload={}){await ensureIdentity();const {data,error}=await client.rpc('party_v4_world',{p_code:code,p_action:action,p_payload:payload});if(error)throw error;return data;}
