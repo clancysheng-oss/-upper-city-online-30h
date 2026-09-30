@@ -1,3 +1,4 @@
+import {storyOptionAvailable} from './novel-story.js';
 import {itemPrice} from './checks.js';
 import { chapters, sideQuests, contextualText } from "./campaign.js";
 import { encounters } from "./encounters.js";
@@ -26,16 +27,20 @@ const racialFeatures={龙裔:'龙息（战斗范围）与血统抗性',提夫林
 export function character(p) {
   return `<strong>${p.is_companion ? "🤝 伙伴 · " : ""}${esc(p.name)} · ${esc(p.race||'待选种族')} · ${esc(p.class_name)} · ${p.level || 1} 级</strong><p>HP ${p.hp}/${p.max_hp} · AC ${p.ac} · ${p.gold} 金币 · ${p.experience||0} XP<br><small>${experienceProgress(p.level||1,p.experience||0)}</small></p><div class="stats">${["力量", "敏捷", "体质", "智力", "感知", "魅力"].map((s, i) => `<span>${s} ${p.stats[i]}</span>`).join("")}</div><p>种族：${esc(p.race||'待选择')}${p.ancestry?` · ${esc(p.ancestry)}血统`:''} · 熟练加值 +${Math.min(6,2+Math.floor(((p.level||1)-1)/4))}<br>种族能力：${esc(racialFeatures[p.race]||'待选择')} · 豁免熟练：${esc(saveProficiencies[p.class_name]||'无')}<br>Inspiration：${p.build?.inspiration||0} / 4<br>专长：${esc(p.build?.feats?.join('、')||'无')} · 通缉 ${p.wanted||0}<br>状态：${esc(Object.keys(p.conditions||{}).filter(k=>k!=='prison_visit').join('、')||'正常')}<br>声望：大厅 ${p.reputation?.hall||0} / 守卫 ${p.reputation?.guard||0} / 贡德 ${p.reputation?.gond||0} / 商人 ${p.reputation?.merchant||0} / 地下 ${p.reputation?.underground||0}<br>装备：${esc(p.equipment.join("、"))}<br>背包：${esc(p.inventory.join("、") || "空")}</p>${p.hp === 0 ? `<p class="error">倒地 · 死亡豁免成功 ${p.death_successes}/3，失败 ${p.death_failures}/3 ${p.death_failures >= 3 ? "· 死亡" : ""}</p>` : ""}`;
 }
-function dialogueView(s) {
+function dialogueView(s,mine) {
   const scene = dialogues[s.chapter],
     d =
       s.dialogue?.chapter === s.chapter ? s.dialogue : { step: 0, history: [] },
     done = d.step >= scene.beats.length;
-  return `<section class="story-step"><div class="step-title"><span>01</span><h3>与 ${esc(scene.name)} 对话</h3><small>${esc(scene.role)}</small></div>${(d.history || []).map((h) => `<div class="dialogue-history"><p>队伍：${esc(h.choice)}</p><p>${esc(scene.name)}：${esc(h.reply)}</p></div>`).join("")}${done ? '<p class="good">对话结束 · 调查地点已开放</p>' : `<div class="npc-line"><strong>${esc(scene.name)}</strong><p>${esc(scene.beats[d.step].text)}</p></div><p class="muted">任何队员都可以选择回应，选择会同步给全队。</p>${scene.beats[d.step].options.map((o, i) => button(esc(o.label), "dialogue", false, `data-choice="${i}" class="choice"`)).join("")}`}</section>`;
+  const affinity=s.narrative?.relationships?.[String(s.chapter)]||0;
+  const line=t=>esc(t).split('\n\n').map(p=>`<p>${p}</p>`).join('');
+  const history=(d.history||[]).map(h=>`<div class="dialogue-history"><p class="player-line">你们：${esc(h.choice)}</p><div>${line(h.reply)}</div>${h.reaction?`<small class="dialogue-reaction">${esc(h.reaction)}</small>`:''}</div>`);
+  return `<section class="story-step dialogue-scene"><div class="step-title"><h3>${esc(scene.name)}</h3><small>${esc(scene.role)}</small></div>${history.length>2?`<details class="earlier-dialogue"><summary>回看此前交谈（${history.length-2}段）</summary>${history.slice(0,-2).join('')}</details>`:''}${history.slice(-2).join('')}${done?'<p class="good">交谈已记录。可以继续搜证，或直接承担下一步行动。</p>':`<div class="npc-line"><strong>现场</strong>${line(scene.beats[d.step].text)}</div><div class="dialogue-options">${scene.beats[d.step].options.map((o,i)=>!storyOptionAvailable(o,mine)?'':button(`${esc(o.label)}${o.skill?` <small>${esc(o.skill)} · DC ${o.dc}</small>`:''}`,'dialogue',!storyOptionAvailable(o,mine)||Boolean(s.combat?.hp>0),`data-choice="${i}" class="choice dialogue-choice"`)).join('')}</div>`}${affinity?`<p class="muted">${affinity>=3?'对方愿意与你们共同承担风险。':affinity<=-2?'对方保持戒备，不会轻易替你们作保。':'对方仍在判断你们的立场。'}</p>`:''}</section>`;
+
 }
 function exploreView(s) {
   const ready = s.dialogue?.chapter === s.chapter && s.dialogue.step >= 3;
-  return `<section class="story-step"><div class="step-title"><span>02</span><h3>探索与检定</h3></div><p class="muted">${ready ? "两处地点都可调查。队员各自行动，结果和线索同步保存。" : "先完成当前章节的 NPC 对话。"}</p><div class="explore-grid">${encounters[
+  return `<section class="story-step"><div class="step-title"><h3>可选调查与证据</h3></div><p class="muted">${ready ? "调查能补足证据；新版剧情可在交谈后直接行动，未取得的线索不会自动发放。" : "先完成当前章节的 NPC 对话。"}</p><div class="explore-grid">${encounters[
     s.chapter
   ]
     .map((e, i) => {
@@ -54,7 +59,7 @@ function deepView(s,mine,players){
   [26,18,'记录员丹缇保存的撤离名单让凯尔认出被删改的证人。']
  ].filter(([chapter,source])=>s.chapter===chapter&&d.storyFlags?.[`${source}_witness_0`]).map(([, ,text])=>`<p class="finding">先前决定的回响：${esc(text)}</p>`).join('');
  const interject=players.find(p=>p.is_companion)?.name;
- return `<section class="story-step deep-story"><div class="step-title"><span>新</span><h3>${esc(c.scene)} · ${esc(c.focus)}</h3></div><p>沿着本章线索来到另一处现场。可以先询问见证人，再检查遗留的物证。</p>${prior}
+ return `<section class="story-step deep-story"><div class="step-title"><span>新</span><h3>${esc(c.scene)} · ${esc(c.focus)}</h3></div><p>这位见证人的经历可能推翻你们刚听到的说法。是否继续调查由队伍决定。</p>${prior}
  <div class="npc-line"><strong>${esc(c.npc)} · ${esc(c.role)}</strong><p>${esc(c.lines[0])}</p></div>
  <p class="muted">主动询问不同问题；全队共享调查与回答。</p>
  ${c.questions.map((label,i)=>button(label,'deep_talk',talk.includes(String(i)),`data-choice="${i}" class="choice"`)).join('')}
@@ -76,7 +81,8 @@ function choiceView(s, chapter, mine, combat) {
       (s.explored || []).filter((x) => x.startsWith(`${s.chapter}:`)).length >=
       2,
     chosen = s.chosen_chapter === s.chapter;
-  return `<section class="story-step"><div class="step-title"><span>03</span><h3>队伍抉择</h3></div><p class="muted">${chosen ? "本章选择已记录。房主可以推进。" : explored ? "调查完成，选择你们将采取的方向。" : "完成对话和两处调查后开放。"}</p>${chapter.choices.map((c, i) => button(esc(c.label), "choice", chosen || !explored, `data-index="${i}" class="choice"`)).join("")}${mine.is_host ? button("👑 推进下一章", "advance", Boolean(combat && combat.hp > 0) || s.chapter >= 29 || !chosen) : ""}${s.ending ? `<h3>结局：${esc(s.ending)}</h3>` : ""}</section>`;
+  const ready=s.story_version>=5?(s.dialogue?.chapter===s.chapter&&s.dialogue.step>=3):explored;
+  return `<section class="story-step"><div class="step-title"><h3>你们接下来怎样行动</h3></div><p class="muted">${chosen ? "本章选择已记录。房主可以推进。" : ready ? "可以行动，也可以先补足证据。选择会被记录，不能靠重进撤销。" : "交谈后开放；新版剧情的调查可自行决定。"}</p>${chapter.choices.map((c, i) => button(`${esc(c.label)}<small>${esc(c.outcome||'')}</small>`, "choice", chosen || !ready || Boolean(combat?.hp>0), `data-index="${i}" class="choice"`)).join("")}${mine.is_host ? button("👑 推进下一章", "advance", Boolean(combat && combat.hp > 0) || s.chapter >= 29 || !chosen) : ""}${chosen&&s.last_choice_reply?`<p class="decision-result">${esc(s.last_choice_reply)}</p>`:""}${s.ending ? `<h3>结局：${esc(s.ending)}</h3>` : ""}</section>`;
 }
 function battleView(s, players, mine, messages) {
   const c = s.combat;
@@ -148,7 +154,7 @@ export function renderGame(data, error, selectedArea=null, savedRoom=false) {
     prior=s.chapter>0?chapters[s.chapter-1]:null,
     priorChoice=prior?.choices.find(c=>flags.includes(c.flag));
   if(s.postgame)return `${mapView(s,selectedArea)}<div class="grid"><div>${selectedArea?areaView(data,selectedArea):`<section class="card story-card"><p class="muted">CHAPTER 30 / 30 · ADVENTURE COMPLETE</p><h2>主线已完成 · ${esc(s.ending||'Upper City 的黎明')}</h2><p>最终敌人已被击败。城市仍有传闻、支线和未探明的角落；你们可以继续探索已开放区域。</p></section>`}<section class="card"><h3>队伍行动记录</h3><div class="log">${data.messages.map(m=>`<p><strong>${esc(m.sender)}</strong>：${esc(m.body)}</p>`).join('')}</div></section></div><aside><section class="card"><h3>当前在线 Party</h3>${data.players.map(p=>`<div class="member">${p.is_host?'👑 ':''}${character(p)}</div>`).join('')}</section><section class="card"><h3>任务与线索</h3>${questJournal(s)}</section>${merchantView(mine,chapter.id,flags,false,s)}</aside></div>`;
-  return `${battleView(s, data.players, mine, data.messages)}${combat?.hp>0&&error?`<p class="error" role="alert">${esc(error)}</p>`:''}${mapView(s,selectedArea)}${selectedArea&&error?`<p class="error">${esc(error)}</p>`:""}<div class="grid"><div>${selectedArea?areaView(data,selectedArea):`<section class="card story-card"><p class="muted">${esc(chapter.act)} · 第 ${chapter.id + 1}/30 章</p><h2>${esc(chapter.title)}</h2><p class="story-lead">${esc(chapter.lead)}</p>${prior?`<p class="story-recap">前情 · ${esc(prior.title)}：${esc(prior.text)}${priorChoice?`你们选择了「${esc(priorChoice.label)}」。`:''}</p>`:''}<p>${esc(contextualText(chapter, flags))}</p><p class="story-goal">本章目标：与${esc(dialogues[s.chapter].name)}交谈，调查「${esc(encounters[s.chapter][0][0])}」及「${esc(encounters[s.chapter][1][0])}」，再决定队伍的行动。</p>${dialogueView(s)}${exploreView(s)}${deepView(s,mine,data.players)}${choiceView(s, chapter, mine, combat)}</section>`}<section class="card"><h3>自由行动与检定</h3><textarea id="chat" maxlength="500" placeholder="描述角色的行动、对白或计划"></textarea><div class="row">${button("发送行动", "chat")}<select id="skill" style="width:auto;margin:0">${["力量", "敏捷", "体质", "智力", "感知", "魅力", "调查", "洞悉", "说服", "潜行", "运动", "奥秘", "求生", "巧手", "察觉", "欺骗", "威吓", "表演", "历史", "自然", "宗教", "医药"].map((x) => `<option>${x}</option>`).join("")}</select><input id="dc" type="number" value="15" min="5" max="30" title="难度 DC" style="width:72px;margin:0">${button("D20 检定", "roll")}</div></section><section class="card"><h3>队伍行动记录</h3><div class="log">${[
+  return `${battleView(s, data.players, mine, data.messages)}${combat?.hp>0&&error?`<p class="error" role="alert">${esc(error)}</p>`:''}${mapView(s,selectedArea)}${selectedArea&&error?`<p class="error">${esc(error)}</p>`:""}<div class="grid"><div>${selectedArea?areaView(data,selectedArea):`<section class="card story-card"><p class="muted">${esc(chapter.act)} · 第 ${chapter.id + 1}/30 章</p><h2>${esc(chapter.title)}</h2><p class="story-lead">${esc(chapter.lead)}</p>${prior?`<p class="story-recap">前情 · ${esc(prior.title)}：${esc(prior.goal||prior.text)}${priorChoice?`你们选择了「${esc(priorChoice.label)}」。`:''}</p>`:''}${contextualText(chapter, flags).split("\n\n").map(p=>`<p class="novel-paragraph">${esc(p)}</p>`).join("")}<p class="story-goal">${esc(chapter.goal)}</p>${dialogueView(s,mine)}${choiceView(s, chapter, mine, combat)}<details class="optional-evidence"><summary>继续搜证：现场调查与另一位见证人（可选）</summary>${exploreView(s)}${deepView(s,mine,data.players)}</details></section>`}<section class="card"><h3>自由行动与检定</h3><textarea id="chat" maxlength="500" placeholder="描述角色的行动、对白或计划"></textarea><div class="row">${button("发送行动", "chat")}<select id="skill" style="width:auto;margin:0">${["力量", "敏捷", "体质", "智力", "感知", "魅力", "调查", "洞悉", "说服", "潜行", "运动", "奥秘", "求生", "巧手", "察觉", "欺骗", "威吓", "表演", "历史", "自然", "宗教", "医药"].map((x) => `<option>${x}</option>`).join("")}</select><input id="dc" type="number" value="15" min="5" max="30" title="难度 DC" style="width:72px;margin:0">${button("D20 检定", "roll")}</div></section><section class="card"><h3>队伍行动记录</h3><div class="log">${[
     ...data.messages,
   ]
     .reverse()
