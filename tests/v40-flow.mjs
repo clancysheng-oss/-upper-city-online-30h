@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const db=new PGlite();
 await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql as $$ select current_setting('app.uid',true)::uuid $$;create publication supabase_realtime;create function gen_random_bytes(int) returns bytea language sql as $$ select decode(substr(md5(random()::text),1,$1*2),'hex') $$;");
-const migrations=['supabase.sql','upgrade.sql',...['002_secure_campaign','003_encounters','004_campaign_battles','005_classes_spells','006_deeper_campaign','007_upper_city_areas','008_v21_combat_story','009_v21_dialogue_polish','010_v22_save_slots','011_xp_progression','012_v30_story_depth','013_v30_battle_aftermath','014_v30_followup_dialogue','015_v30_encounter_routes','016_v31_stability_finale','017_v31_saved_room_lobby','018_v40_identity_rules','019_v40_world_build','020_v40_racial_combat','021_v40_final_battle','022_v40_rules_bridge','023_v40_companion','024_v40_companion_actions','025_v40_faction_reputation','026_v40_enemy_ai','027_v40_identity_dialogue','028_v40_final_environment_guard','029_v40_completion'].map(name=>`db/${name}.sql`)];
+const migrations=['supabase.sql','upgrade.sql',...['002_secure_campaign','003_encounters','004_campaign_battles','005_classes_spells','006_deeper_campaign','007_upper_city_areas','008_v21_combat_story','009_v21_dialogue_polish','010_v22_save_slots','011_xp_progression','012_v30_story_depth','013_v30_battle_aftermath','014_v30_followup_dialogue','015_v30_encounter_routes','016_v31_stability_finale','017_v31_saved_room_lobby','018_v40_identity_rules','019_v40_world_build','020_v40_racial_combat','021_v40_final_battle','022_v40_rules_bridge','023_v40_companion','024_v40_companion_actions','025_v40_faction_reputation','026_v40_enemy_ai','027_v40_identity_dialogue','028_v40_final_environment_guard','029_v40_completion','030_v40_internal_permissions'].map(name=>`db/${name}.sql`)];
 for(const file of migrations)await db.exec(fs.readFileSync(file,'utf8').replace('create extension if not exists pgcrypto;',''));
 const ids=['00000000-0000-0000-0000-0000000000a1','00000000-0000-0000-0000-0000000000a2'];
 for(const id of ids)await db.query('insert into auth.users(id) values($1)',[id]);
@@ -161,6 +161,7 @@ const explored=await as(0,'select public.party_command($1,\'explore\',\'{"index"
 assert.equal(explored.state.last_roll.skill,'调查');assert.equal(explored.state.last_roll.other,2);assert.equal(explored.state.last_roll.proficiency,2);
 // Internal damage helpers stay inaccessible to clients, including authenticated members.
 assert.equal((await db.query("select has_function_privilege('authenticated','public.campaign_v4_damage(bigint,jsonb,integer,text,text)','execute') ok")).rows[0].ok,false);
+assert.equal((await db.query("select has_function_privilege('anon','public.party_v31_next_turn(text,bigint)','execute') ok")).rows[0].ok,false);
 console.log('V4.0 COMPLETION PASS: pre-turn feats, kills, immunity/resistance/vulnerability, camp/jail guards, advantage cancellation, immediate concentration and authored exploration');
 
 await as(1,'select public.party_command($1,$2,$3::jsonb) v',[a.room,'leave','{}']);

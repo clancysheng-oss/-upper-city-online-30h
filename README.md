@@ -45,7 +45,7 @@ throw attributes and retains race, ancestry and saving-throw selections during
 realtime refresh. Host-only camp controls reflect the server permissions.
 
 Database release order: apply `db/018_v40_identity_rules.sql` through
-`db/029_v40_completion.sql` in ascending order, **once, in a transaction**, then
+`db/030_v40_internal_permissions.sql` in ascending order, **once, in a transaction**, then
 release the matching frontend. Migrations 018/021/022 rename existing functions;
 they must not be replayed. Migration 029 verifies patch anchors and preserves
 all existing chapter content and the V3 transport/turn engines. These migrations
@@ -59,3 +59,16 @@ new seeded combat regressions. `npm run build` checks the frontend bundle.
 Browser acceptance, a full playthrough of the migrated database, and coordinated
 production release remain required. The V4 engine remains the campaign's compact
 ruleset; these changes do not claim a complete D&D fifth-edition implementation.
+
+### Production release validation
+
+V4 migrations 018–029 and internal RPC permission migration 030 were applied
+on 2026-09-30. Baseline rows and database functions are backed up in the private
+`uc_release_backups` schema. All seven pre-existing save slots and all forty-four
+characters remained present; existing saved world-state and save-slot JSON were
+unchanged. V4 production deployed from merge 56cb654. Browser acceptance passed
+creation of a lightning Dragonborn wizard, solo start, two-die advantage with
+server modifiers, short/long camp rest and per-chapter limits, manual save, exit,
+refresh and character re-entry with race/ancestry retained. The legacy rest
+control now opens camp. Trigger handlers and the internal turn-repair helper
+are no longer callable as client RPCs.
