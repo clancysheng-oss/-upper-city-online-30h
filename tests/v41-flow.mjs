@@ -9,6 +9,7 @@ await db.exec(fs.readFileSync('db/031_v41_action_checks.sql','utf8'));
 import {actionCheckKey,itemPrice,canReroll} from '../src/checks.js';
 import {checksPanel} from '../src/world-view.js';
 import {diceOverlay} from '../src/identity-view.js';
+await db.exec(fs.readFileSync('db/032_v41_playtest_fixes.sql','utf8'));
 await db.exec('begin');
 const ids=['00000000-0000-0000-0000-0000000000b1','00000000-0000-0000-0000-0000000000b2'];
 for(const id of ids)await db.query('insert into auth.users(id) values($1)',[id]);
@@ -160,4 +161,22 @@ assert.equal(canReroll(rerolled.state.checks[key],mine(rerolled)),false);
 assert.equal(actionCheckKey('v4_world',{kind:'crime',choice:'theft'},rerolled.state,mine(rerolled)),'crime:kegs:theft');
 assert.equal((await db.query("select has_function_privilege('anon','public.party_v41_check(text,text,text)','execute') allowed")).rows[0].allowed,false);
 assert.equal((await db.query("select has_function_privilege('authenticated','public.campaign_v41_dispatch(text,text,text,jsonb,text)','execute') allowed")).rows[0].allowed,false);
+
+// Real-play regression: mandatory quest failure used to leave a permanently locked stage.
+await context('kegs',1);
+await db.query("update game_states set state=state||jsonb_build_object('side_quests',jsonb_build_object('star',jsonb_build_object('step',1,'status','进行中')),'area_dialogue',jsonb_build_array(jsonb_build_object('npc','tobin')),'checks','{}'::jsonb) where room_code=$1",[room]);
+const area=(i,action,payload)=>as(i,'select public.party_area($1,$2,$3::jsonb) v',[room,action,JSON.stringify(payload)]);
+await assert.rejects(area(0,'area_quest_fallback',{area:'kegs',quest:'star'}),/QUEST_FALLBACK_UNAVAILABLE/);
+failed=await outcome(()=>area(0,'area_quest',{area:'kegs',quest:'star'}),false);
+key=failed.state.last_roll.check_id;
+await assert.rejects(area(1,'area_quest_fallback',{area:'kegs',quest:'star'}),/QUEST_FALLBACK_UNAVAILABLE/);
+await retry(0,key,'accept');
+await db.query('update players set gold=10 where id=$1',[a.me]);
+let fallback=await area(1,'area_quest_fallback',{area:'kegs',quest:'star'});
+assert.equal(fallback.state.side_quests.star.step,2);
+assert.equal(fallback.state.checks[key].result.success,false);
+assert.equal(fallback.state.checks[key].attempts,1);
+await assert.rejects(area(0,'area_quest_fallback',{area:'kegs',quest:'star'}),/QUEST_FALLBACK_UNAVAILABLE/);
+assert.equal((await db.query("select has_function_privilege('authenticated','public.party_area_v412_core(text,text,jsonb)','execute') allowed")).rows[0].allowed,false);
+
 await db.exec('rollback');await db.close();console.log('V4.1 action rewards, multiplayer locks, Inspiration rerolls, risks, economy and persistence passed');
