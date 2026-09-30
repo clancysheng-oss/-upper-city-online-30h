@@ -11,6 +11,8 @@ import {checksPanel} from '../src/world-view.js';
 import {diceOverlay} from '../src/identity-view.js';
 await db.exec(fs.readFileSync('db/032_v41_playtest_fixes.sql','utf8'));
 await db.exec(fs.readFileSync('db/033_v41_resume_combat.sql','utf8'));
+await db.exec(fs.readFileSync('db/034_v41_pending_evidence_dialogue.sql','utf8'));
+await db.exec(fs.readFileSync('db/035_v41_retry_and_solo_sidequests.sql','utf8'));
 await db.exec('begin');
 const ids=['00000000-0000-0000-0000-0000000000b1','00000000-0000-0000-0000-0000000000b2'];
 for(const id of ids)await db.query('insert into auth.users(id) values($1)',[id]);
@@ -190,4 +192,18 @@ assert.equal((await db.query("select state#>>'{combat,turn}' turn from game_stat
 const reconnected=await command(0,'heartbeat');assert.equal(reconnected.state.combat.turn,a.me);
 const attacked=await command(0,'attack',{enemy:0});assert.ok(attacked.messages.some(m=>m.kind==='attack'));
 
+// Regression: explicit wipe recovery resets combat-only uses, never durable checks.
+await db.query("update players set hp=0 where room_code=$1",[room]);
+await db.query("update game_states set state=jsonb_set(state,'{combat}',jsonb_build_object('hp',100,'max_hp',100,'side_quest','gate','round',4,'turn',null,'enemies',jsonb_build_array(jsonb_build_object('name','伏兵','hp',100,'max_hp',100,'ac',12,'attack_bonus',1,'damage_min',10,'damage_die',10)),'environment',jsonb_build_array(jsonb_build_object('name','火药桶','kind','blast','amount',8,'used',true)),'racial_uses',jsonb_build_object($2::text,true),'wards',jsonb_build_object($2::text,3),'initiative',jsonb_build_array(jsonb_build_object('id',$2::bigint,'roll',10)))) where room_code=$1",[room,a.me]);
+const replayed=await command(0,'retry');
+assert.equal(replayed.state.combat.environment[0].used,false);
+assert.deepEqual(replayed.state.combat.racial_uses,{});
+assert.deepEqual(replayed.state.combat.wards,{});
+assert.equal(replayed.state.combat.encounter_retry_count,1);
+assert.equal(replayed.state.combat.sidequest_party_size,1);
+assert.equal(replayed.state.combat.enemies[0].max_hp,35);
+assert.equal(replayed.state.combat.enemies[0].damage_min,4);
+const unchanged=await command(0,'heartbeat');
+assert.equal(unchanged.state.combat.enemies[0].max_hp,35);
+assert.deepEqual(unchanged.state.checks,replayed.state.checks);
 await db.exec('rollback');await db.close();console.log('V4.1 action rewards, multiplayer locks, Inspiration rerolls, risks, economy and persistence passed');
