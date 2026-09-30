@@ -13,6 +13,8 @@ await db.exec(fs.readFileSync('db/032_v41_playtest_fixes.sql','utf8'));
 await db.exec(fs.readFileSync('db/033_v41_resume_combat.sql','utf8'));
 await db.exec(fs.readFileSync('db/034_v41_pending_evidence_dialogue.sql','utf8'));
 await db.exec(fs.readFileSync('db/035_v41_retry_and_solo_sidequests.sql','utf8'));
+await db.exec(fs.readFileSync('db/036_v41_companion_turn_presence.sql','utf8'));
+await db.exec(fs.readFileSync('db/036_v41_companion_turn_presence.sql','utf8'));
 await db.exec('begin');
 const ids=['00000000-0000-0000-0000-0000000000b1','00000000-0000-0000-0000-0000000000b2'];
 for(const id of ids)await db.query('insert into auth.users(id) values($1)',[id]);
@@ -206,4 +208,23 @@ assert.equal(replayed.state.combat.enemies[0].damage_min,4);
 const unchanged=await command(0,'heartbeat');
 assert.equal(unchanged.state.combat.enemies[0].max_hp,35);
 assert.deepEqual(unchanged.state.checks,replayed.state.checks);
+// A second paid restart restores resources again without repeatedly shrinking enemies.
+await db.query("update players set hp=0 where room_code=$1",[room]);
+await db.query("update game_states set state=jsonb_set(jsonb_set(jsonb_set(state,'{combat,turn}','null'),'{combat,racial_uses}',jsonb_build_object($2::text,true)),'{combat,environment,0,used}','true') where room_code=$1",[room,a.me]);
+const replayedAgain=await command(0,'retry');
+assert.equal(replayedAgain.state.combat.encounter_retry_count,2);
+assert.equal(replayedAgain.state.combat.enemies[0].max_hp,35);
+assert.equal(replayedAgain.state.combat.enemies[0].hp,35);
+assert.equal(replayedAgain.state.combat.enemies[0].damage_min,4);
+assert.equal(replayedAgain.state.combat.environment[0].used,false);
+assert.deepEqual(replayedAgain.state.combat.racial_uses,{});
+assert.deepEqual(replayedAgain.state.checks,replayed.state.checks);
+
+// A companion has no heartbeat, but repeated snapshots cannot spend its turn.
+const companion=(await db.query("insert into players(room_code,name,class_name,is_companion,hp,max_hp,ac,stats,inventory,equipment,gold,level,ability_charges,is_online,last_seen) values($1,'伊莉娅·棱光','游侠',true,28,28,15,'[12,17,14,13,15,12]','[]','[]',0,3,2,false,now()-interval '1 day') returning id",[room])).rows[0].id;
+await db.query("update game_states set state=jsonb_set(state,'{combat}',jsonb_build_object('hp',12,'max_hp',12,'round',1,'turn',$2::bigint,'enemies',jsonb_build_array(jsonb_build_object('name','追猎者','hp',12,'max_hp',12,'ac',5,'attack_bonus',0,'damage_min',1,'damage_die',1)),'initiative',jsonb_build_array(jsonb_build_object('id',$2::bigint,'roll',20),jsonb_build_object('id',$3::bigint,'roll',10)))) where room_code=$1",[room,companion,a.me]);
+for(let n=0;n<3;n++){const d=await snapshot();assert.equal(d.state.combat.turn,companion);assert.equal(d.state.combat.round,1);assert.equal(d.state.combat.hp,12);}
+const companionAction=await area(0,'companion_attack',{companion,enemy:0});
+assert.ok(companionAction.messages.some(m=>m.kind==='companion_attack'));
+
 await db.exec('rollback');await db.close();console.log('V4.1 action rewards, multiplayer locks, Inspiration rerolls, risks, economy and persistence passed');
