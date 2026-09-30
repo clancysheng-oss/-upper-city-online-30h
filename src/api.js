@@ -53,3 +53,5 @@ export async function enterRegion(code,area){await ensureIdentity();const {data,
 export async function deepCommand(code,action,payload={}){await ensureIdentity();const {data,error}=await client.rpc('party_deep',{p_code:code,p_action:action,p_payload:payload});if(error)throw error;return data;}
 export async function identityCommand(code,action,payload={}){await ensureIdentity();const {data,error}=await client.rpc('party_v4_identity',{p_code:code,p_action:action,p_payload:payload});if(error)throw error;return data;}
 export async function worldCommand(code,action,payload={}){await ensureIdentity();const {data,error}=await client.rpc('party_v4_world',{p_code:code,p_action:action,p_payload:payload});if(error)throw error;return data;}
+
+export async function checkCommand(code,check,action){await ensureIdentity();const {data,error}=await client.rpc('party_v41_check',{p_code:code,p_check:check,p_action:action});if(error)throw error;return data;}

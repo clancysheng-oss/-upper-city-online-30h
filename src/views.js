@@ -1,3 +1,4 @@
+import {itemPrice} from './checks.js';
 import { chapters, sideQuests, contextualText } from "./campaign.js";
 import { encounters } from "./encounters.js";
 import { dialogues } from "./dialogues.js";
@@ -23,7 +24,7 @@ export const button = (label, action, disabled = false, extra = "") =>
 const saveProficiencies={战士:'力量、体质',圣武士:'力量、体质',游荡者:'敏捷、智力',法师:'智力、感知',牧师:'感知、魅力',游侠:'力量、敏捷',吟游诗人:'敏捷、魅力'};
 const racialFeatures={龙裔:'龙息（战斗范围）与血统抗性',提夫林:'火焰抗性；3级解锁地狱烈焰',人类:'不熟练检定 +1',矮人:'毒素抗性、石工调查与额外 HP',精灵:'敏锐察觉、黑暗视觉与抗魅惑'};
 export function character(p) {
-  return `<strong>${p.is_companion ? "🤝 伙伴 · " : ""}${esc(p.name)} · ${esc(p.race||'待选种族')} · ${esc(p.class_name)} · ${p.level || 1} 级</strong><p>HP ${p.hp}/${p.max_hp} · AC ${p.ac} · ${p.gold} 金币 · ${p.experience||0} XP<br><small>${experienceProgress(p.level||1,p.experience||0)}</small></p><div class="stats">${["力量", "敏捷", "体质", "智力", "感知", "魅力"].map((s, i) => `<span>${s} ${p.stats[i]}</span>`).join("")}</div><p>种族：${esc(p.race||'待选择')}${p.ancestry?` · ${esc(p.ancestry)}血统`:''} · 熟练加值 +${Math.min(6,2+Math.floor(((p.level||1)-1)/4))}<br>种族能力：${esc(racialFeatures[p.race]||'待选择')} · 豁免熟练：${esc(saveProficiencies[p.class_name]||'无')}<br>专长：${esc(p.build?.feats?.join('、')||'无')} · 通缉 ${p.wanted||0}<br>状态：${esc(Object.keys(p.conditions||{}).join('、')||'正常')}<br>声望：大厅 ${p.reputation?.hall||0} / 守卫 ${p.reputation?.guard||0} / 贡德 ${p.reputation?.gond||0} / 商人 ${p.reputation?.merchant||0} / 地下 ${p.reputation?.underground||0}<br>装备：${esc(p.equipment.join("、"))}<br>背包：${esc(p.inventory.join("、") || "空")}</p>${p.hp === 0 ? `<p class="error">倒地 · 死亡豁免成功 ${p.death_successes}/3，失败 ${p.death_failures}/3 ${p.death_failures >= 3 ? "· 死亡" : ""}</p>` : ""}`;
+  return `<strong>${p.is_companion ? "🤝 伙伴 · " : ""}${esc(p.name)} · ${esc(p.race||'待选种族')} · ${esc(p.class_name)} · ${p.level || 1} 级</strong><p>HP ${p.hp}/${p.max_hp} · AC ${p.ac} · ${p.gold} 金币 · ${p.experience||0} XP<br><small>${experienceProgress(p.level||1,p.experience||0)}</small></p><div class="stats">${["力量", "敏捷", "体质", "智力", "感知", "魅力"].map((s, i) => `<span>${s} ${p.stats[i]}</span>`).join("")}</div><p>种族：${esc(p.race||'待选择')}${p.ancestry?` · ${esc(p.ancestry)}血统`:''} · 熟练加值 +${Math.min(6,2+Math.floor(((p.level||1)-1)/4))}<br>种族能力：${esc(racialFeatures[p.race]||'待选择')} · 豁免熟练：${esc(saveProficiencies[p.class_name]||'无')}<br>Inspiration：${p.build?.inspiration||0} / 4<br>专长：${esc(p.build?.feats?.join('、')||'无')} · 通缉 ${p.wanted||0}<br>状态：${esc(Object.keys(p.conditions||{}).filter(k=>k!=='prison_visit').join('、')||'正常')}<br>声望：大厅 ${p.reputation?.hall||0} / 守卫 ${p.reputation?.guard||0} / 贡德 ${p.reputation?.gond||0} / 商人 ${p.reputation?.merchant||0} / 地下 ${p.reputation?.underground||0}<br>装备：${esc(p.equipment.join("、"))}<br>背包：${esc(p.inventory.join("、") || "空")}</p>${p.hp === 0 ? `<p class="error">倒地 · 死亡豁免成功 ${p.death_successes}/3，失败 ${p.death_failures}/3 ${p.death_failures >= 3 ? "· 死亡" : ""}</p>` : ""}`;
 }
 function dialogueView(s) {
   const scene = dialogues[s.chapter],
@@ -112,7 +113,7 @@ function powersView(mine, s, combat, players, inBattle=false) {
       : ""
   }</p><label>能力<select id="power">${known.map((p) => `<option value="${p.id}">${p.ring ? p.ring + " 环" : "职业"} · ${esc(p.name)} · ${esc(p.description)}</option>`).join("")}</select></label>${spellcasters.has(mine.class_name) ? `<label>法术位<select id="slot"><option value="0">职业技能</option>${[1, 2, 3, 4, 5, 6].map((n) => `<option value="${n}">${n} 环 · ${mine.spell_slots?.[n] || 0} 位</option>`).join("")}</select></label>` : ""}<label>盟友目标<select id="powerTarget">${players.map((p) => `<option value="${p.id}" ${p.id === mine.id ? "selected" : ""}>${esc(p.name)} · HP ${p.hp}/${p.max_hp}</option>`).join("")}</select></label>${foes.length ? `<label>敌人目标<select id="enemyTarget">${foes.map((e, i) => `<option value="${-i - 1}" ${e.hp <= 0 ? "disabled" : ""}>${esc(e.name)} · HP ${e.hp}/${e.max_hp}</option>`).join("")}</select></label>` : ""}${button("使用技能 / 施法", "power", !canAct || !known.length)}${mine.is_host ? button("🏕️ 营地休息", "v4_world", Boolean(combat && combat.hp > 0), 'data-kind="camp_enter"') : ""}</section>`;
 }
-function merchantView(mine, chapter, flags, fighting) {
+function merchantView(mine, chapter, flags, fighting, state) {
   const unlocked = merchants.filter((m) => m.chapter <= chapter);
   const discount = flags.includes(`support_${chapter}_stay`);
   return `<section class="card"><h3>城中商人</h3><p>金币 ${mine.gold} · 商品随剧情开放；购买和装备由服务器核算。</p>${unlocked
@@ -122,7 +123,7 @@ function merchantView(mine, chapter, flags, fighting) {
           .filter((i) => i.merchant === m.id)
           .map(
             (i) =>
-              `<div class="shop-item"><div><strong>${esc(i.name)}</strong><small>${esc(i.description)}</small></div>${button(`${discount ? Math.ceil(i.price * 0.9) : i.price} 金币 · 购买`, "buy", fighting || mine.gold < (discount ? Math.ceil(i.price * 0.9) : i.price) || (i.slot !== "consumable" && (mine.inventory.includes(i.name) || mine.equipment.includes(i.name))), `data-item="${esc(i.name)}"`)}</div>`,
+              `<div class="shop-item"><div><strong>${esc(i.name)}</strong><small>${esc(i.description)}</small></div>${button(`${itemPrice(i,mine,state)} 金币 · 购买`, "buy", fighting || mine.gold < (itemPrice(i,mine,state)) || (i.slot !== "consumable" && (mine.inventory.includes(i.name) || mine.equipment.includes(i.name))), `data-item="${esc(i.name)}"`)}</div>`,
           )
           .join("")}</details>`,
     )
@@ -146,7 +147,7 @@ export function renderGame(data, error, selectedArea=null, savedRoom=false) {
     combat = s.combat,
     prior=s.chapter>0?chapters[s.chapter-1]:null,
     priorChoice=prior?.choices.find(c=>flags.includes(c.flag));
-  if(s.postgame)return `${mapView(s,selectedArea)}<div class="grid"><div>${selectedArea?areaView(data,selectedArea):`<section class="card story-card"><p class="muted">CHAPTER 30 / 30 · ADVENTURE COMPLETE</p><h2>主线已完成 · ${esc(s.ending||'Upper City 的黎明')}</h2><p>最终敌人已被击败。城市仍有传闻、支线和未探明的角落；你们可以继续探索已开放区域。</p></section>`}<section class="card"><h3>队伍行动记录</h3><div class="log">${data.messages.map(m=>`<p><strong>${esc(m.sender)}</strong>：${esc(m.body)}</p>`).join('')}</div></section></div><aside><section class="card"><h3>当前在线 Party</h3>${data.players.map(p=>`<div class="member">${p.is_host?'👑 ':''}${character(p)}</div>`).join('')}</section><section class="card"><h3>任务与线索</h3>${questJournal(s)}</section>${merchantView(mine,chapter.id,flags,false)}</aside></div>`;
+  if(s.postgame)return `${mapView(s,selectedArea)}<div class="grid"><div>${selectedArea?areaView(data,selectedArea):`<section class="card story-card"><p class="muted">CHAPTER 30 / 30 · ADVENTURE COMPLETE</p><h2>主线已完成 · ${esc(s.ending||'Upper City 的黎明')}</h2><p>最终敌人已被击败。城市仍有传闻、支线和未探明的角落；你们可以继续探索已开放区域。</p></section>`}<section class="card"><h3>队伍行动记录</h3><div class="log">${data.messages.map(m=>`<p><strong>${esc(m.sender)}</strong>：${esc(m.body)}</p>`).join('')}</div></section></div><aside><section class="card"><h3>当前在线 Party</h3>${data.players.map(p=>`<div class="member">${p.is_host?'👑 ':''}${character(p)}</div>`).join('')}</section><section class="card"><h3>任务与线索</h3>${questJournal(s)}</section>${merchantView(mine,chapter.id,flags,false,s)}</aside></div>`;
   return `${battleView(s, data.players, mine, data.messages)}${combat?.hp>0&&error?`<p class="error" role="alert">${esc(error)}</p>`:''}${mapView(s,selectedArea)}${selectedArea&&error?`<p class="error">${esc(error)}</p>`:""}<div class="grid"><div>${selectedArea?areaView(data,selectedArea):`<section class="card story-card"><p class="muted">${esc(chapter.act)} · 第 ${chapter.id + 1}/30 章</p><h2>${esc(chapter.title)}</h2><p class="story-lead">${esc(chapter.lead)}</p>${prior?`<p class="story-recap">前情 · ${esc(prior.title)}：${esc(prior.text)}${priorChoice?`你们选择了「${esc(priorChoice.label)}」。`:''}</p>`:''}<p>${esc(contextualText(chapter, flags))}</p><p class="story-goal">本章目标：与${esc(dialogues[s.chapter].name)}交谈，调查「${esc(encounters[s.chapter][0][0])}」及「${esc(encounters[s.chapter][1][0])}」，再决定队伍的行动。</p>${dialogueView(s)}${exploreView(s)}${deepView(s,mine,data.players)}${choiceView(s, chapter, mine, combat)}</section>`}<section class="card"><h3>自由行动与检定</h3><textarea id="chat" maxlength="500" placeholder="描述角色的行动、对白或计划"></textarea><div class="row">${button("发送行动", "chat")}<select id="skill" style="width:auto;margin:0">${["力量", "敏捷", "体质", "智力", "感知", "魅力", "调查", "洞悉", "说服", "潜行", "运动", "奥秘", "求生", "巧手", "察觉", "欺骗", "威吓", "表演", "历史", "自然", "宗教", "医药"].map((x) => `<option>${x}</option>`).join("")}</select><input id="dc" type="number" value="15" min="5" max="30" title="难度 DC" style="width:72px;margin:0">${button("D20 检定", "roll")}</div></section><section class="card"><h3>队伍行动记录</h3><div class="log">${[
     ...data.messages,
   ]
@@ -162,5 +163,5 @@ export function renderGame(data, error, selectedArea=null, savedRoom=false) {
     )
     .join(
       "",
-    )}${(s.clues || []).map((c) => `<span class="tag">${esc(c)}</span>`).join("") || '<p class="muted">尚未发现线索</p>'}${questJournal(s)}</section>${combat?.hp>0?'':powersView(mine, s, combat, data.players)}${merchantView(mine, chapter.id, flags, combat?.hp > 0)}<p class="error">${esc(error)}</p></aside></div>`;
+    )}${(s.clues || []).map((c) => `<span class="tag">${esc(c)}</span>`).join("") || '<p class="muted">尚未发现线索</p>'}${questJournal(s)}</section>${combat?.hp>0?'':powersView(mine, s, combat, data.players)}${merchantView(mine, chapter.id, flags, combat?.hp > 0,s)}<p class="error">${esc(error)}</p></aside></div>`;
 }

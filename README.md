@@ -72,3 +72,13 @@ server modifiers, short/long camp rest and per-chapter limits, manual save, exit
 refresh and character re-entry with race/ancestry retained. The legacy rest
 control now opens camp. Trigger handlers and the internal turn-repair helper
 are no longer callable as client RPCs.
+
+### V4.1 — action outcomes and Inspiration (2026-09-30)
+
+Apply `db/031_v41_action_checks.sql` after 030. Existing player/world/save rows are preserved. Event receipts are stored in `game_states.state.checks`; points and one-time award receipts are stored in `players.build` and included by existing full-row saves. Main/deeper exploration, regional inspection, quest checks, identity dialogue and world actions use server-owned IDs. Shared events cannot be retried by changing players; personal field/guard/prison events identify their actor. One initial roll and one owner-paid Inspiration reroll are allowed. Failed rolls remain pending until accepted or superseded by a deliberate action; the latter settles consequences once. Scene changes prevent replaying an old event.
+
+Loot pools are authored per area/target, with higher DC and wanted/reputation penalties for valuable targets. Pickpocketing/theft award gold and items; locks award a valuable item and clue; trespassing and keys unlock secret rooms. Each discovered secret passage can bypass one ordinary first-round encounter, excluding side battles and the finale. Persuasion earns real 15% merchant discounts, deception grants goods/access and creates a lie audited on a later chapter transition, intimidation earns money at a reputation cost. Social field checks use the same shared negotiation event; altering skill/DC/mode cannot reset it. Free field investigations have a server-owned DC and a once-per-character/chapter/area opportunity.
+
+Inspiration caps at four and is awarded once for identity routes, deeper discoveries, class-specific solutions, important side-quest completion and milestone story decisions. Capped awards are receipted, so they cannot be reclaimed after spending points. Ordinary combat and repeated crimes award none. UI displays points, concrete outcomes, remaining opportunity, lock status and owner-only reroll/accept buttons. Historical V4 crime/dialogue attempts stay locked; they are not reset to manufacture new rewards.
+
+Validation: all ten test suites plus production build; the V4.1 suite covers real RPC outcomes, two-player shared locks, personal checks, both reroll outcomes, resource rollback, point scarcity/cap, exact discounted purchases, keys/secret bypass, later lie exposure, authored chapter/deeper/regional/quest/identity rerolls, side-quest/story awards, save/reconnect persistence and private-helper privileges.
