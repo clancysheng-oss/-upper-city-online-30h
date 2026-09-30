@@ -28,3 +28,34 @@ The 30 original chapters include three primary NPC dialogue decisions, two origi
 ## v3.0 migration
 
 Apply `db/012_v30_story_depth.sql` after `db/011_xp_progression.sql`, then `db/013_v30_battle_aftermath.sql`, `db/014_v30_followup_dialogue.sql`, and `db/015_v30_encounter_routes.sql` before deploying the matching frontend. Rebuild both after editing `src/deep-story.js` or `src/battle-aftermath.js` or `src/deep-followups.js` with `npm run v30:sql`. New state is stored in the existing room state JSON; old save slots load with empty defaults. The migrations keep the existing room, player, quest, merchant, chapter and save tables. Battle aftermaths provide one server-owned investigation and unique clue/item plus XP to each player; only the actual victor can collect it once.
+
+## V4.0 continuation checkpoint (2026-09-30)
+
+Recovered from remote `feat/v4-identity-world` at `d9431a5` without reverting the
+previous work. The production baseline is `ee09bba` (V3.1). The existing V4 preview
+built successfully, but the shared Supabase database still has no V4 functions.
+A successful frontend build alone does not enable V4 gameplay.
+
+This continuation integrates racial/feat checks into the ordinary authored
+investigations, moves feat damage before turn completion, applies enemy damage
+immunity/resistance/vulnerability, starts concentration before immediate enemy
+retaliation, cancels advantage against disadvantage, validates missing race and
+ancestry values, and enforces camp/jail permissions. The UI exposes all six saving
+throw attributes and retains race, ancestry and saving-throw selections during
+realtime refresh. Host-only camp controls reflect the server permissions.
+
+Database release order: apply `db/018_v40_identity_rules.sql` through
+`db/029_v40_completion.sql` in ascending order, **once, in a transaction**, then
+release the matching frontend. Migrations 018/021/022 rename existing functions;
+they must not be replayed. Migration 029 verifies patch anchors and preserves
+all existing chapter content and the V3 transport/turn engines. These migrations
+change the shared RPC behavior: V3 clients do not expose the camp required for
+rest, so do not apply them to the live database while retaining the V3 frontend.
+Use an isolated preview database or a coordinated V4 release.
+
+Validation: `npm test` runs nine suites covering V2–V4, including old save slots,
+second-player re-entry, server authorization, three-phase finale transitions and
+new seeded combat regressions. `npm run build` checks the frontend bundle.
+Browser acceptance, a full playthrough of the migrated database, and coordinated
+production release remain required. The V4 engine remains the campaign's compact
+ruleset; these changes do not claim a complete D&D fifth-edition implementation.

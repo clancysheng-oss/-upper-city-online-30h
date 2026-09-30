@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const db=new PGlite();
 await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql as $$ select current_setting('app.uid',true)::uuid $$;create publication supabase_realtime;create function gen_random_bytes(int) returns bytea language sql as $$ select decode(substr(md5(random()::text),1,$1*2),'hex') $$;");
-const migrations=['supabase.sql','upgrade.sql',...['002_secure_campaign','003_encounters','004_campaign_battles','005_classes_spells','006_deeper_campaign','007_upper_city_areas','008_v21_combat_story','009_v21_dialogue_polish','010_v22_save_slots','011_xp_progression','012_v30_story_depth','013_v30_battle_aftermath','014_v30_followup_dialogue','015_v30_encounter_routes','016_v31_stability_finale','017_v31_saved_room_lobby','018_v40_identity_rules','019_v40_world_build','020_v40_racial_combat','021_v40_final_battle','022_v40_rules_bridge','023_v40_companion','024_v40_companion_actions','025_v40_faction_reputation','026_v40_enemy_ai','027_v40_identity_dialogue','028_v40_final_environment_guard'].map(name=>`db/${name}.sql`)];
+const migrations=['supabase.sql','upgrade.sql',...['002_secure_campaign','003_encounters','004_campaign_battles','005_classes_spells','006_deeper_campaign','007_upper_city_areas','008_v21_combat_story','009_v21_dialogue_polish','010_v22_save_slots','011_xp_progression','012_v30_story_depth','013_v30_battle_aftermath','014_v30_followup_dialogue','015_v30_encounter_routes','016_v31_stability_finale','017_v31_saved_room_lobby','018_v40_identity_rules','019_v40_world_build','020_v40_racial_combat','021_v40_final_battle','022_v40_rules_bridge','023_v40_companion','024_v40_companion_actions','025_v40_faction_reputation','026_v40_enemy_ai','027_v40_identity_dialogue','028_v40_final_environment_guard','029_v40_completion'].map(name=>`db/${name}.sql`)];
 for(const file of migrations)await db.exec(fs.readFileSync(file,'utf8').replace('create extension if not exists pgcrypto;',''));
 const ids=['00000000-0000-0000-0000-0000000000a1','00000000-0000-0000-0000-0000000000a2'];
 for(const id of ids)await db.query('insert into auth.users(id) values($1)',[id]);
@@ -89,7 +89,7 @@ await db.query("update public.game_states set state=jsonb_set(jsonb_set(state,'{
 const recruited=await as(0,'select public.party_snapshot($1) v',[a.room]);
 assert.equal(recruited.players.find(p=>p.name==='亚岚·铜脉')?.race,'矮人');
 assert.ok(recruited.state.v4_aran_joined);
-assert.equal(recruited.players.find(p=>p.id===a.me).reputation.gond,12);
+assert.equal(recruited.players.find(p=>p.id===a.me).reputation.gond,(finalState.players.find(p=>p.id===a.me).reputation.gond||0)+12);
 await world(0,'camp_enter');
 await db.query('update public.players set inventory=inventory||\'"炉心护符"\'::jsonb where id=$1',[a.me]);
 const equipped=await world(0,'companion_equip',{companion:recruited.state.v4_aran_joined,item:'炉心护符'});
@@ -99,6 +99,7 @@ await db.query("update public.game_states set state=jsonb_set(state,'{version}',
 assert.equal((await as(0,'select public.party_snapshot($1) v',[a.room])).players.filter(p=>p.name==='亚岚·铜脉').length,1);
 const aran=recruited.players.find(p=>p.name==='亚岚·铜脉');
 await db.query("update public.game_states set state=state||jsonb_build_object('chapter',0,'combat',$2::jsonb) where room_code=$1",[a.room,JSON.stringify({name:'伙伴试炼',enemies:[{name:'木偶',hp:70,max_hp:70,ac:9,attack_bonus:0,damage_min:1,damage_die:3}],hp:70,max_hp:70,turn:aran.id,initiative:[{id:aran.id,roll:20},{id:a.me,roll:10}],round:1,wards:{}})]);
+await db.query('select setseed(0)');
 const acted=await as(0,'select public.party_v4_companion($1,$2,$3,$4) v',[a.room,aran.id,'shock',-1]);
 assert.ok(acted.state.combat.enemies[0].hp<acted.state.combat.enemies[0].max_hp);
 assert.equal(acted.players.find(p=>p.id===aran.id).ability_charges,1);
@@ -114,6 +115,54 @@ await db.query("update public.game_states set state=jsonb_set(jsonb_set(state,'{
 const hazardState=await as(0,'select public.party_snapshot($1) v',[hazardRoom.room]);
 assert.equal(hazardState.state.combat.final_phase,2);
 assert.equal(hazardState.state.final_victory,undefined);
+// Completion regressions: use the actual authenticated commands and seeded server dice.
+await assert.rejects(cmd(0,hazardRoom.room,'race',{}),/INVALID_RACE/);
+await assert.rejects(cmd(0,hazardRoom.room,'race',{race:'龙裔'}),/INVALID_RACE/);
+await cmd(0,hazardRoom.room,'race',{race:'人类'});
+await db.query("update public.game_states set state=state||'{\"chapter\":0,\"combat\":null,\"started\":true}'::jsonb where room_code=$1",[hazardRoom.room]);
+const coreActor=hazardRoom.me;
+async function completionWorld(action,payload={}){return as(0,'select public.party_v4_world($1,$2,$3::jsonb) v',[hazardRoom.room,action,JSON.stringify(payload)])}
+const duel={name:'规则回归',enemies:[{name:'木偶',hp:1000,max_hp:1000,ac:1,attack_bonus:-100,damage_min:2,damage_die:1}],hp:1000,max_hp:1000,turn:coreActor,initiative:[{id:coreActor,roll:20}],round:1,wards:{}};
+async function resetDuel(combat=duel,feats=[],stats=[16,14,14,12,12,12]){
+ await db.query('update public.players set level=1,hp=max_hp,conditions=\'{}\'::jsonb,stats=$2::jsonb,build=jsonb_build_object(\'feats\',$3::jsonb,\'points\',1),ability_charges=2,spell_slots=public.campaign_slots(12) where id=$1',[coreActor,JSON.stringify(stats),JSON.stringify(feats)]);
+ await db.query("update public.game_states set state=state||jsonb_build_object('chapter',0,'combat',$2::jsonb,'v4_camp',false) where room_code=$1",[hazardRoom.room,JSON.stringify(combat)]);
+ await db.query('select setseed(0.123)');
+}
+async function attack(){return as(0,'select public.party_command($1,\'attack\',\'{"enemy":0}\'::jsonb) v',[hazardRoom.room])}
+await resetDuel();const ordinary=await attack();const rawDamage=1000-ordinary.state.combat.enemies[0].hp;
+assert.ok(rawDamage>0,JSON.stringify({combat:ordinary.state.combat,messages:ordinary.messages.slice(-2)}));
+await resetDuel(duel,['武器大师']);const mastered=await attack();assert.equal(1000-mastered.state.combat.enemies[0].hp,rawDamage+3);
+await resetDuel({...duel,enemies:[{...duel.enemies[0],hp:rawDamage+2,max_hp:rawDamage+2,attack_bonus:100,damage_min:20}],hp:rawDamage+2,max_hp:rawDamage+2},['武器大师']);
+const kill=await attack();assert.equal(kill.state.combat.hp,0);assert.equal(kill.players.find(p=>p.id===coreActor).hp,kill.players.find(p=>p.id===coreActor).max_hp,'feat kill must prevent enemy retaliation');
+await resetDuel({...duel,enemies:[{...duel.enemies[0],immunities:['物理']}]},['武器大师']);assert.equal((await attack()).state.combat.hp,1000);
+await resetDuel({...duel,enemies:[{...duel.enemies[0],resistances:['物理']}]},['武器大师']);assert.equal(1000-(await attack()).state.combat.hp,Math.floor((rawDamage+3)/2));
+await resetDuel({...duel,enemies:[{...duel.enemies[0],vulnerabilities:['物理']}]},['武器大师']);assert.equal(1000-(await attack()).state.combat.hp,(rawDamage+3)*2);
+await resetDuel();await assert.rejects(completionWorld('build',{choice:'技能专家'}),/COMBAT_ACTIVE/);
+await db.query("update public.game_states set state=state||'{\"combat\":null,\"v4_camp\":true}'::jsonb where room_code=$1",[hazardRoom.room]);
+await assert.rejects(completionWorld('crime',{type:'theft'}),/LEAVE_CAMP_FIRST/);
+await db.query("update public.players set conditions='{\"jailed\":true}'::jsonb where id=$1",[coreActor]);
+await assert.rejects(completionWorld('camp_leave'),/JAILED/);
+await resetDuel();
+await db.query("update public.players set conditions='{\"disadvantage\":true}'::jsonb where id=$1",[coreActor]);
+const cancelled=await cmd(0,hazardRoom.room,'check',{skill:'调查',dc:15,mode:'advantage'});assert.equal(cancelled.state.last_roll.mode,'normal');
+await db.query("update public.players set conditions='{\"disadvantage\":false}'::jsonb where id=$1",[coreActor]);
+assert.equal((await cmd(0,hazardRoom.room,'check',{skill:'调查',dc:15,mode:'advantage'})).state.last_roll.mode,'advantage');
+// Concentration begins before retaliation on the very turn the spell is cast.
+await resetDuel({...duel,enemies:[{...duel.enemies[0],attack_bonus:100,damage_min:2}]},[],[16,14,-100,12,12,12]);
+await db.query("update public.players set class_name='法师' where id=$1",[coreActor]);
+const ward=await as(0,'select public.party_power($1,\'wizard_focus\',$2,0) v',[hazardRoom.room,coreActor]);
+assert.ok(ward.messages.some(m=>m.body.includes('专注豁免失败')));
+assert.equal(ward.players.find(p=>p.id===coreActor).conditions.concentrating,undefined);
+assert.equal(ward.state.combat.wards[String(coreActor)],undefined);
+// Regular authored exploration now receives the same V4 racial and feat modifiers.
+await db.query("update public.game_states set state=state||'{\"combat\":null,\"explored\":[],\"dialogue\":{\"chapter\":0,\"step\":3}}'::jsonb where room_code=$1",[hazardRoom.room]);
+await db.query("update public.players set conditions='{}'::jsonb,build='{\"feats\":[\"技能专家\"],\"points\":0}'::jsonb where id=$1",[coreActor]);
+const explored=await as(0,'select public.party_command($1,\'explore\',\'{"index":0}\'::jsonb) v',[hazardRoom.room]);
+assert.equal(explored.state.last_roll.skill,'调查');assert.equal(explored.state.last_roll.other,2);assert.equal(explored.state.last_roll.proficiency,2);
+// Internal damage helpers stay inaccessible to clients, including authenticated members.
+assert.equal((await db.query("select has_function_privilege('authenticated','public.campaign_v4_damage(bigint,jsonb,integer,text,text)','execute') ok")).rows[0].ok,false);
+console.log('V4.0 COMPLETION PASS: pre-turn feats, kills, immunity/resistance/vulnerability, camp/jail guards, advantage cancellation, immediate concentration and authored exploration');
+
 await as(1,'select public.party_command($1,$2,$3::jsonb) v',[a.room,'leave','{}']);
 await assert.rejects(cmd(1,a.room,'check',{skill:'奥秘',dc:15}),/RECONNECT_FIRST/);
 console.log('V4.0 FOUNDATION PASS: old save, race, D20, build, camp rest, crime/prison and online-only actions');
