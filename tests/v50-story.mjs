@@ -7,7 +7,9 @@ import {renderGame} from '../src/views.js';
 const db=new PGlite();
 await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql as $$ select current_setting('app.uid',true)::uuid $$;create publication supabase_realtime;create function gen_random_bytes(int) returns bytea language sql as $$ select decode(substr(md5(random()::text),1,$1*2),'hex') $$;");
 for(const file of ['supabase.sql','upgrade.sql',...fs.readdirSync('db').filter(f=>/^\d{3}_.*\.sql$/.test(f)).sort().map(f=>'db/'+f)]) await db.exec(fs.readFileSync(file,'utf8').replace('create extension if not exists pgcrypto;',''));
-await db.exec(fs.readFileSync('db/037_v50_novel_campaign.sql','utf8')); // Idempotent application.
+await db.exec(fs.readFileSync('db/037_v50_novel_campaign.sql','utf8'));
+await db.exec(fs.readFileSync('db/038_v50_dialogue_polish.sql','utf8'));
+await db.exec(fs.readFileSync('db/038_v50_dialogue_polish.sql','utf8')); // Idempotent application.
 const ids=['00000000-0000-0000-0000-0000000000e1','00000000-0000-0000-0000-0000000000e2'];
 for(const id of ids)await db.query('insert into auth.users(id) values($1)',[id]);
 await db.exec('begin');
@@ -42,6 +44,11 @@ assert.deepEqual(seeded.map(d=>d.beats),novelChapters.map(c=>c.beats));
 const savedDice=(await db.query("select pg_get_functiondef('public.campaign_v41_dice_core(bigint,text,integer,text,integer,boolean)'::regprocedure) src")).rows[0].src;
 for(const success of [true,false]){
  await db.exec(`create or replace function public.campaign_v41_dice_core(p_player bigint,p_skill text,p_dc integer,p_mode text default 'normal',p_bonus integer default 0,p_save boolean default false) returns jsonb language sql as $$select jsonb_build_object('success',${success},'die',${success?20:1},'total',${success?25:1},'skill',$2,'dc',$3,'bonus',$5)$$`);
+ if(success){
+  await db.query("update game_states set state=state||jsonb_build_object('chapter',1,'dialogue',null,'combat',null,'chosen_chapter',-1,'narrative','{}'::jsonb) where room_code=$1",[room]);
+  await cmd(0,'dialogue',{choice:0});await cmd(0,'dialogue',{choice:2});
+  assert.equal((await snap()).state.last_roll.bonus,1,'protecting the NPC gives a reachable +1 on the next dialogue check');
+ }
  const chapter=novelChapters.find(c=>c.beats[0].options.some(o=>o.skill));const ix=chapter.beats[0].options.findIndex(o=>o.skill);const option=chapter.beats[0].options[ix];
  await db.query("update game_states set state=state||jsonb_build_object('chapter',$2::int,'dialogue',null,'combat',null,'chosen_chapter',-1) where room_code=$1",[room,chapter.id]);
  await cmd(0,'dialogue',{choice:ix});s=(await snap()).state;
