@@ -14,7 +14,11 @@ await db.exec(fs.readFileSync('db/033_v41_resume_combat.sql','utf8'));
 await db.exec(fs.readFileSync('db/034_v41_pending_evidence_dialogue.sql','utf8'));
 await db.exec(fs.readFileSync('db/035_v41_retry_and_solo_sidequests.sql','utf8'));
 await db.exec(fs.readFileSync('db/036_v41_companion_turn_presence.sql','utf8'));
+await db.exec(fs.readFileSync('db/039_v50_live_combat_queue.sql','utf8'));
+await db.exec(fs.readFileSync('db/039_v50_live_combat_queue.sql','utf8')); // Safe to replay.
 await db.exec(fs.readFileSync('db/036_v41_companion_turn_presence.sql','utf8'));
+await db.exec(fs.readFileSync('db/039_v50_live_combat_queue.sql','utf8'));
+await db.exec(fs.readFileSync('db/039_v50_live_combat_queue.sql','utf8')); // Safe to replay.
 await db.exec('begin');
 const ids=['00000000-0000-0000-0000-0000000000b1','00000000-0000-0000-0000-0000000000b2'];
 for(const id of ids)await db.query('insert into auth.users(id) values($1)',[id]);
@@ -226,5 +230,46 @@ await db.query("update game_states set state=jsonb_set(state,'{combat}',jsonb_bu
 for(let n=0;n<3;n++){const d=await snapshot();assert.equal(d.state.combat.turn,companion);assert.equal(d.state.combat.round,1);assert.equal(d.state.combat.hp,12);}
 const companionAction=await area(0,'companion_attack',{companion,enemy:0});
 assert.ok(companionAction.messages.some(m=>m.kind==='companion_attack'));
+
+// A player returning after the battle began must enter its persistent turn queue.
+await context('city',2);
+await db.query('update players set hp=max_hp,death_failures=0 where room_code=$1',[room]);
+await db.query("update game_states set state=jsonb_set(state,'{combat}',jsonb_build_object('name','回合重连验证','hp',1000,'max_hp',1000,'round',1,'turn',$2::bigint,'enemies',jsonb_build_array(jsonb_build_object('name','训练守卫','hp',1000,'max_hp',1000,'ac',5,'attack_bonus',0,'damage_min',1,'damage_die',1)),'initiative',jsonb_build_array(jsonb_build_object('id',$2::bigint,'roll',20)))) where room_code=$1",[room,a.me]);
+await db.query('update players set hp=0 where id=$1',[companion]);
+const lateReturn=await command(1,'heartbeat');
+assert.ok(lateReturn.state.combat.initiative.some(e=>e.id===b.me),'returning teammate is enrolled in the active battle');
+assert.equal(lateReturn.state.combat.turn,a.me,'joining cannot steal the current turn');
+for(let round=1;round<=3;round++){
+ const hostAttack=await command(0,'attack',{enemy:0});
+ assert.equal(hostAttack.state.combat.turn,b.me,'host attack must yield to teammate');
+ assert.equal(hostAttack.state.combat.round,round);
+ await assert.rejects(command(0,'attack',{enemy:0}),/NOT_YOUR_TURN/);
+ for(let i=0;i<3;i++)assert.equal((await snapshot()).state.combat.turn,b.me);
+ const guestAttack=await command(1,'attack',{enemy:0});
+ assert.equal(guestAttack.state.combat.turn,a.me);
+ assert.equal(guestAttack.state.combat.round,round+1);
+ assert.equal(guestAttack.state.combat.initiative.filter(e=>e.id===b.me).length,1);
+}
+
+// A genuinely new guest arriving mid-combat joins at the tail exactly once.
+ids.push('00000000-0000-0000-0000-0000000000b3');
+await db.query('insert into auth.users(id) values($1)',[ids[2]]);
+const newGuest=await command(2,'join',{name:'新入队战士',class:'战士'});
+await identity(2,'race',{race:'人类'});
+assert.equal(newGuest.state.combat.turn,a.me);
+assert.equal(newGuest.state.combat.initiative.at(-1).id,newGuest.me);
+await command(0,'attack',{enemy:0});
+assert.equal((await snapshot()).state.combat.turn,b.me);
+// The second actor disconnects: continue forward to the third, never back to host.
+await command(1,'leave');
+assert.equal((await snapshot()).state.combat.turn,newGuest.me);
+await command(1,'heartbeat');
+assert.equal((await snapshot()).state.combat.turn,newGuest.me);
+assert.equal((await snapshot()).state.combat.initiative.filter(e=>e.id===b.me).length,1);
+await assert.rejects(command(0,'attack',{enemy:0}),/NOT_YOUR_TURN/);
+await command(2,'attack',{enemy:0});
+assert.equal((await snapshot()).state.combat.turn,a.me);
+assert.equal((await db.query("select has_function_privilege('authenticated','public.campaign_v501_sync_initiative(text)','execute') allowed")).rows[0].allowed,false);
+assert.equal((await db.query("select has_function_privilege('authenticated','public.party_v31_next_turn(text,bigint)','execute') allowed")).rows[0].allowed,false);
 
 await db.exec('rollback');await db.close();console.log('V4.1 action rewards, multiplayer locks, Inspiration rerolls, risks, economy and persistence passed');

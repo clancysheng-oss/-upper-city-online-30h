@@ -46,6 +46,17 @@ function render(){
 }
 function syncFieldCheck(){if(!data)return;const el=root.querySelector('[data-act="v4_check"]');if(!el)return;const key=actionCheckKey('v4_check',{skill:root.querySelector('#skill')?.value,save:root.querySelector('#savingThrow')?.checked},data.state,data.players.find(p=>p.id===data.me));el.disabled=Boolean(data.state.checks?.[key]);}
 function setRoom(code){room=code;localStorage.setItem('uc_room',code);history.replaceState(null,'',`${location.pathname}${invite?`?party=${code}`:''}`);unsub?.();unsub=subscribe(code,()=>refresh());clearInterval(heartbeat);heartbeat=setInterval(()=>command(code,'heartbeat').catch(()=>{}),30000);}
+let reconnecting=false;
+async function resumePresence(){
+ if(!room||document.visibilityState==='hidden'||reconnecting)return;
+ const code=room;reconnecting=true;
+ try{const result=await command(code,'heartbeat');if(room===code){acceptState(result);render();}}
+ catch(e){if(room===code){error=actionError(e);render();}}
+ finally{reconnecting=false;}
+}
+window.addEventListener('focus',resumePresence);
+window.addEventListener('pageshow',resumePresence);
+document.addEventListener('visibilitychange',resumePresence);
 function acceptState(result){const before=data?.players.find(p=>p.id===data.me),after=result.players.find(p=>p.id===result.me);if(before&&after&&(after.build?.inspiration||0)>(before.build?.inspiration||0))notice=`获得 Inspiration +${after.build.inspiration-(before.build?.inspiration||0)}（${after.build.inspiration}/4）`;if(before&&after&&after.level>before.level)notice=`升级！${after.name} 达到 ${after.level} 级，HP 与法术位已更新`;data=result;if(result.state.last_roll?.at&&result.state.last_roll.at!==seenRoll){seenRoll=result.state.last_roll.at;if(before)rollOpen=true;}}
 async function exitSlot(){const oldRoom=room;if(oldRoom){try{await command(oldRoom,'leave');}catch(e){error=actionError(e);}}data=null;room='';invite='';activeSlot=null;selectedArea=null;showInvite=false;finaleStep=null;finaleDismissed=false;unsub?.();unsub=null;clearInterval(heartbeat);localStorage.removeItem('uc_room');history.replaceState(null,'',location.pathname);try{slots=await listSlots();}catch(e){error=actionError(e);}render();}
 async function refresh(){if(!room||loading)return;loading=true;try{const result=await snapshot(room);if(result){acceptState(result);selectedArea=data.state.current_area==='city'?null:data.state.current_area||null;render();}}catch(e){if(e.message.includes('NOT_MEMBER')||e.message.includes('ROOM_NOT_FOUND')){localStorage.removeItem('uc_room');room='';data=null;unsub?.();clearInterval(heartbeat);render();}else{error=actionError(e);render();}}finally{loading=false;}}
